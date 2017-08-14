@@ -459,6 +459,21 @@ void MPU6050_I2C_BufferRead(u8 slaveAddr, u8* pBuffer, u8 readAddr, u16 NumByteT
     I2C_AcknowledgeConfig(MPU6050_I2C, ENABLE);
     // EXT_CRT_SECTION();
 }
+
+// 0 - 8 kHz
+// 1-6 - 1 kHz
+void MPU6050_set_DLPF_mode(uint8_t mode) {
+	MPU6050_WriteBits(MPU6050_DEFAULT_ADDRESS, MPU6050_RA_CONFIG, MPU6050_CFG_DLPF_CFG_BIT, MPU6050_CFG_DLPF_CFG_LENGTH, mode);
+}
+
+// 0 - none
+// 1 - 5Hz
+// 2 - 2.5 Hz
+// 3 - 1.25 Hz
+// 4 - 0.63 Hz
+void MPU6050_set_DHPF_mode(uint8_t mode) {
+	MPU6050_WriteBits(MPU6050_DEFAULT_ADDRESS, MPU6050_RA_ACCEL_CONFIG, MPU6050_ACONFIG_ACCEL_HPF_BIT, MPU6050_ACONFIG_ACCEL_HPF_LENGTH, mode);
+}
 /**
  * @}
  *//* end of group MPU6050_Library */

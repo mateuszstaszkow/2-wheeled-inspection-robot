@@ -25,7 +25,7 @@
 #define MPU_CONSTANT 180
 #define VELOCITY_INTERRUPT_PERIOD 500
 #define WIFI_INTERRUPT_PERIOD 200
-#define MPU_INTERRUPT_PERIOD 2
+#define MPU_INTERRUPT_PERIOD 1
 #define ENCODER_INTERRUPT_FREQUENCY_DIVISOR 20
 #define ENCODER_CONSTANT 0.46
 
@@ -43,7 +43,7 @@ struct MeasuredData {
 	int pos_l;
 	int pos_r;
 	float x;
-	float xr;
+	int xr;
 	float vl;
 	float vr;
 	uint8_t dir;
@@ -74,6 +74,8 @@ struct MeasuredData measuredData;
 //gyro[4] - X axis
 //gyro[5] - Z axis
 s16 gyro[6];
+//ESP8266 RX buffer
+char esp_buffer[10];
 
 //interrupt flags
 volatile bool velocity_flag;
@@ -86,13 +88,45 @@ volatile bool mpu_flag;
 
 //REGULATOR CONSTANTS
 //PID
-//float kp = 7, ki = 0.05, kd = 0.9;
-float kp = 7;
-float ki = 0.1;
-float kd = 0.1;
+// *** NO PWM
+//float kp = 0.001; //no filter
+//float ki = 0.0003;
+//float kd = 0.00085;
+//float kp = 0.0013; //avg 10
+//float ki = 0.00015;
+//float kd = 0.00085;
+//float kp = 0.0015; //median3 + avg6
+//float ki = 0.0002;
+//float kd = 0.00085;
+//float kp = 0.001; //test
+//float ki = 0.0000;
+//float kd = 0.0000;
+
+// *** PWM
+//float kp = 0.27; //avg 20
+//float ki = 0.025;
+//float kd = 0.2;
+//float kp = 0.27; //avg 10, 11.1 V
+//float ki = 0.025;
+//float kd = 0.24;
+//float kp = 0.6; //avg 10, 12.6 V
+//float ki = 0.007;
+//float kd = 0.554;
+//float kp = 0.6; //avg 10, 12.1 V
+//float ki = 0.01;
+//float kd = 0.557;
+//float kp = 0.6; //avg 10, 11.1 V - BEZ MEDIANY, BALANSUJE
+//float ki = 0.015;
+//float kd = 0.577;
+//float kp = 0.6; //avg 10 + med 3 11.1 V
+//float ki = 0.019;
+//float kd = 0.59;
+float kp = 0.6; //avg 10, 11.6 V - BEZ MEDIANY, BALANSUJE
+float ki = 0.013;
+float kd = 0.57;
 //Complementary filter values, A for angle and B for angular acceleration
-float kA = 0.85;
-float kB = 0.15;
+float kA = 1.5;
+float kB = 2;
 
 void delay_ms(int time) {
 	timer_ms = time;
@@ -104,7 +138,7 @@ void SysTick_Handler()
 {
 	if(timer_ms) timer_ms--;
 	global_time_ms++;
-	if(!(global_time_ms % VELOCITY_INTERRUPT_PERIOD)) velocity_flag = true;
+	//if(!(global_time_ms % VELOCITY_INTERRUPT_PERIOD)) velocity_flag = true;
 	if(!(global_time_ms % WIFI_INTERRUPT_PERIOD)) uart_flag = true;
 	if(!(global_time_ms % MPU_INTERRUPT_PERIOD)) mpu_flag = true;
 }
@@ -129,8 +163,12 @@ void global_variables_init() {
 	mpu_flag = false;
 
 	int i;
-	for(i=0; i<6; i++)
+	for(i=0; i<6; i++) {
 		gyro[i] = 0;
+	}
+	for(i=0; i<10; i++) {
+		esp_buffer[i] = 0;
+	}
 }
 
 //Absolute value calculating function
@@ -220,9 +258,10 @@ void encoder_init()
 	right_encoder_init();
 }
 
-void atmega_communication_init() {
+void motor_driver_init() {
 	RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM3, ENABLE);
 	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOA, ENABLE);
+	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOC, ENABLE);
 
 	GPIO_InitTypeDef gpio;
 	TIM_TimeBaseInitTypeDef tim;
@@ -235,16 +274,19 @@ void atmega_communication_init() {
 	//PC.3 - left motor's shaft position (0-3.3V)
 	//GPIO configuration
 	GPIO_StructInit(&gpio);
-	gpio.GPIO_Pin = GPIO_Pin_12 | GPIO_Pin_11;
+	gpio.GPIO_Pin = GPIO_Pin_12 | GPIO_Pin_11 | GPIO_Pin_15 | GPIO_Pin_0;
 	gpio.GPIO_Mode = GPIO_Mode_Out_PP;
 	GPIO_Init(GPIOA, &gpio);
 
-	gpio.GPIO_Pin = GPIO_Pin_2 | GPIO_Pin_3;
+	GPIO_StructInit(&gpio);
+	gpio.GPIO_Pin = GPIO_Pin_2 | GPIO_Pin_3 | GPIO_Pin_12;
 	gpio.GPIO_Mode = GPIO_Mode_Out_PP;
 	GPIO_Init(GPIOC, &gpio);
+//	GPIO_SetBits(GPIOC, GPIO_Pin_12);
+//	GPIO_SetBits(GPIOA, GPIO_Pin_15);
 
 	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOB, ENABLE);
-	RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM4 | RCC_APB1Periph_TIM2, ENABLE);
+	RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM4, ENABLE);
 
 	GPIO_StructInit(&gpio);
 	gpio.GPIO_Pin = GPIO_Pin_8|GPIO_Pin_9;
@@ -252,18 +294,18 @@ void atmega_communication_init() {
 	gpio.GPIO_Mode = GPIO_Mode_AF_PP;
 	GPIO_Init(GPIOB, &gpio);
 
-	GPIO_StructInit(&gpio);
-	gpio.GPIO_Pin = GPIO_Pin_0;
-	gpio.GPIO_Speed = GPIO_Speed_50MHz;
-	gpio.GPIO_Mode = GPIO_Mode_AF_PP;
-	GPIO_Init(GPIOA, &gpio);
+//	GPIO_StructInit(&gpio);
+//	gpio.GPIO_Pin = GPIO_Pin_0;
+//	//gpio.GPIO_Speed = GPIO_Speed_50MHz;
+//	gpio.GPIO_Mode = GPIO_Mode_AF_PP;
+//	GPIO_Init(GPIOA, &gpio);
 
 	TIM_TimeBaseStructInit(&tim);
 	tim.TIM_CounterMode = TIM_CounterMode_Up;
-	tim.TIM_Prescaler = 64 - 1;
-	tim.TIM_Period = 255;
-	TIM_TimeBaseInit(TIM4, &tim);
-	TIM_TimeBaseInit(TIM2, &tim);
+	tim.TIM_Prescaler = 1280 - 1;
+	tim.TIM_Period = 1000;
+	TIM_TimeBaseInit(TIM4, &tim); //50 Hz
+//	TIM_TimeBaseInit(TIM2, &tim);
 
 	TIM_OCStructInit(&channel);
 	channel.TIM_OCMode = TIM_OCMode_PWM1;
@@ -272,19 +314,33 @@ void atmega_communication_init() {
 	TIM_OC3Init(TIM4, &channel);
 	channel.TIM_Pulse = 0;
 	TIM_OC4Init(TIM4, &channel);
-	channel.TIM_Pulse = 0;
-	TIM_OC1Init(TIM2, &channel);
+//	channel.TIM_Pulse = 0;
+//	TIM_OC1Init(TIM2, &channel);
 
-	//TIM_Cmd(TIM4, ENABLE);
-	TIM_Cmd(TIM2, ENABLE);
+	TIM_Cmd(TIM4, ENABLE);
+//	TIM_Cmd(TIM2, ENABLE);
+
+//	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOD, ENABLE);
+////	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOC, ENABLE);
+//
+//	GPIO_StructInit(&gpio);
+//	gpio.GPIO_Pin = GPIO_Pin_1|GPIO_Pin_0;
+//	gpio.GPIO_Mode = GPIO_Mode_AF_PP;
+//	GPIO_Init(GPIOD, &gpio);
+
+//	GPIO_StructInit(&gpio);
+//	gpio.GPIO_Pin = GPIO_Pin_14|GPIO_Pin_15;
+//	gpio.GPIO_Speed = GPIO_Speed_50MHz;
+//	gpio.GPIO_Mode = GPIO_Mode_AF_PP;
+//	GPIO_Init(GPIOC, &gpio);
 }
 
 void mpu_read_data() {
 	MPU6050_GetRawAccelGyro(gyro);
-	measuredData.fx = gyro[0]/MPU_CONSTANT;
+	measuredData.fx = gyro[0];
 	measuredData.fy = gyro[1]/MPU_CONSTANT;
 	measuredData.fz = gyro[2]/MPU_CONSTANT;
-	measuredData.ax = gyro[4]/MPU_CONSTANT;
+	measuredData.ax = gyro[4];
 	measuredData.ay = gyro[3]/MPU_CONSTANT;
 	measuredData.az = gyro[5]/MPU_CONSTANT;
 }
@@ -317,15 +373,33 @@ void EXTI15_10_IRQHandler()
 	} else if(EXTI_GetITStatus(EXTI_Line11)) EXTI_ClearITPendingBit(EXTI_Line11);
 }
 
+//void USART3_IRQHandler(void)
+//{
+//    if(USART_GetITStatus(USART3, USART_IT_RXNE) != RESET)
+//    {
+//    	//measuredData.xr = USART_ReceiveData(USART3);
+//    	static uint8_t buffer_iterator = 0;
+//    	esp_buffer[buffer_iterator++] = USART_ReceiveData(USART3);
+//    	if(esp_buffer[buffer_iterator - 1] == ';') {
+//    		for(int i=0; i<10; i++) {
+//    			measuredData.xr[i] = esp_buffer[i];
+//    		}
+//    		buffer_iterator = 0;
+//    	}
+//    }
+//}
+
 void hardware_setup() {
 	//Encoders initialization
-	encoder_init();
+	//encoder_init();
 	//Motor driver board initialization
-	atmega_communication_init();
+	motor_driver_init();
 	//ESP8266 initialization
 	esp_init();
 	//MPU6050 initialization
 	MPU6050_I2C_Init();
+	MPU6050_set_DLPF_mode(6);
+	MPU6050_set_DHPF_mode(1);
 	MPU6050_Initialize();
 	//while(!MPU6050_TestConnection());
 	//Main file's global variables initialization
@@ -335,11 +409,11 @@ void hardware_setup() {
 }
 
 void export_data_wifi() {
-	printf("%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,;\r\n",
-			(int)filtered_angle,
+	printf("%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d;\r\n",
+			(int)measuredData.fx,
 			(int)measuredData.fy,
 		    (int)measuredData.fz,
-			(int)filtered_acc,
+			(int)measuredData.ax,
 			(int)measuredData.ay,
 			(int)measuredData.az,
 			(int)measuredData.pos_l%360,
@@ -348,23 +422,38 @@ void export_data_wifi() {
 			(int)measuredData.vl,
 			(int)measuredData.dir,
 			(int)measuredData.pid,
-			(int)measuredData.xr);
+			(int)measuredData.xr
+			);
 }
 
-void export_data_atmega() {
+void set_direction() {
+	if(robot_direction_ref == 0) {
+		GPIO_SetBits(GPIOA, GPIO_Pin_11 | GPIO_Pin_0);
+		GPIO_ResetBits(GPIOA, GPIO_Pin_12);
+		GPIO_ResetBits(GPIOC, GPIO_Pin_12);
+	}
+	else if(robot_direction_ref == 1) {
+		GPIO_ResetBits(GPIOA, GPIO_Pin_11 | GPIO_Pin_0);
+		GPIO_SetBits(GPIOA, GPIO_Pin_12);
+		GPIO_SetBits(GPIOC, GPIO_Pin_12);
+	}
+}
+
+void motor_driver() {
+
 	TIM_OCInitTypeDef channel;
 	TIM_OCStructInit(&channel);
 	channel.TIM_OCMode = TIM_OCMode_PWM1;
 	channel.TIM_OutputState = TIM_OutputState_Enable;
-	channel.TIM_Pulse = abs(measuredData.vl);
-	TIM_OC3Init(TIM4, &channel);
-	channel.TIM_Pulse = abs(measuredData.vr);
-	TIM_OC4Init(TIM4, &channel);
 	channel.TIM_Pulse = abs(robot_velocity_ref);
-	TIM_OC1Init(TIM2, &channel);
+	TIM_OC3Init(TIM4, &channel);
+	channel.TIM_Pulse = abs(robot_velocity_ref);
+	TIM_OC4Init(TIM4, &channel);
 
-	if(robot_direction_ref == 1) GPIO_SetBits(GPIOA, GPIO_Pin_11|GPIO_Pin_12);
-	else if(robot_direction_ref == 0) GPIO_ResetBits(GPIOA, GPIO_Pin_11|GPIO_Pin_12);
+	set_direction();
+
+	//if(robot_direction_ref == 1) GPIO_SetBits(GPIOA, GPIO_Pin_11|GPIO_Pin_12);
+	//else if(robot_direction_ref == 0) GPIO_ResetBits(GPIOA, GPIO_Pin_11|GPIO_Pin_12);
 }
 
 //void complementary_filter(float *pitch)
@@ -393,8 +482,8 @@ void calculate_pid_output(int angle) {
 	int pid;
 
 	iterm += ki*angle;
-	if(iterm > 254) iterm = 254;
-	if(iterm < -254) iterm = -254;
+	if(iterm > 1000) iterm = 1000;
+	if(iterm < -1000) iterm = -1000;
 	dterm = kd*(angle-last_error);
 
 	pid = kp*angle + iterm - dterm;
@@ -402,8 +491,8 @@ void calculate_pid_output(int angle) {
 	if(pid >= 0) robot_direction_ref = 1;
 	else robot_direction_ref = 0;
 
-	if(pid > 254) pid = 254;
-	if(pid < -254) pid = -254;
+	if(pid > 1000) pid = 1000;
+	if(pid < -1000) pid = -1000;
 
 	measuredData.pid = pid;
 
@@ -422,12 +511,36 @@ int main(void)
 	float angle_sum = 0;
 	float acc_sum = 0;
 	char order = '0';
+	uint8_t buffer_iterator = 0;
 
 	while(1) {
-		if (USART_GetFlagStatus(USART3, USART_FLAG_RXNE)) {
-			order = USART_ReceiveData(USART3);
-			measuredData.xr = order;
-		}
+//		if (USART_GetFlagStatus(USART3, USART_FLAG_RXNE)) {
+//			order = USART_ReceiveData(USART3);
+//			measuredData.xr = USART_ReceiveData(USART3);
+			//static uint8_t buffer_iterator = 0;
+			//esp_buffer[buffer_iterator] = USART_ReceiveData(USART3);
+			//measuredData.xr = esp_buffer[buffer_iterator];
+//			if(esp_buffer[buffer_iterator] == ';') {
+//				if(esp_buffer[0]=='p' || esp_buffer[0]=='i' || esp_buffer[0]=='d') {
+////					char number_buffer[8];
+////					uint8_t i;
+////					for(i=0; i<8; i++) {
+////						number_buffer[i] = '0';
+////					}
+////					for(i=1; i<10 || esp_buffer[i] == ';'; i++) {
+////						number_buffer[i] = esp_buffer[i];
+////					}
+////					float regulator_value = (float)atof(number_buffer);
+////					measuredData.xr = (int)regulator_value;
+//					//measuredData.xr = esp_buffer[1];
+//				}
+//
+//				buffer_iterator = 0;
+//			}
+//			buffer_iterator++;
+//			if(buffer_iterator == 10) buffer_iterator = 0;
+			//measuredData.xr = USART_ReceiveData(USART3);
+//		}
 		if(l_cnt_flag_backward) {
 				measuredData.pos_l -= angle_constant;
 				measuredData.dir = 0;
@@ -455,21 +568,41 @@ int main(void)
 		}
 		if(mpu_flag) {
 			mpu_read_data();
-			angle_table[filter_iterator] = measuredData.fx;
+			/*angle_table[filter_iterator] = measuredData.fx;
 			acc_table[filter_iterator] = measuredData.ax;
 			if(++filter_iterator==3) {
 				filter_iterator = 0;
 				angle_sum += median(angle_table);
-				acc_sum += median(acc_table);
-				if(++main_filter_iterator==6) {
-					filtered_angle = angle_sum/6;
-					filtered_acc = acc_sum/6;
-					angle_sum = acc_sum = main_filter_iterator = 0;
-					calculate_pid_output(kA*filtered_angle + kB*filtered_acc);
+				acc_sum += median(acc_table);*/
+				angle_sum += measuredData.fx;
+				acc_sum += measuredData.ax;
+				uint8_t divisor = 10;
+				if((main_filter_iterator%divisor)==0) {
+//					angle_table[filter_iterator] = angle_sum/divisor;
+//					acc_table[filter_iterator] = acc_sum/divisor;
+//					angle_sum = 0;
+//					acc_sum = 0;
+//					if(++filter_iterator==3) {
+//						filter_iterator = 0;
+//						filtered_angle = median(angle_table);
+//						filtered_acc = median(acc_table);
+					filtered_angle = angle_sum/divisor;
+					filtered_acc = acc_sum/divisor;
+					angle_sum = 0;
+					acc_sum = 0;
+					//if()
+					//if(filtered_angle*filtered_acc > 0) kB = 0;
+					calculate_pid_output((int)(kA*filtered_angle) + (int)(kB*filtered_acc));
+			//calculate_pid_output(kA*measuredData.fx + kB*measuredData.ax);
 					//robot_velocity_ref = 0;
-					export_data_atmega();
+					//robot_velocity_ref = 1;
+					motor_driver();
+//					}
 				}
-			}
+				main_filter_iterator++;
+			//calculate_pid_output(kA*measuredData.fx + kB*measuredData.ax);
+			//motor_driver();
+			//}
 			mpu_flag = false;
 		}
 		if(uart_flag) {
