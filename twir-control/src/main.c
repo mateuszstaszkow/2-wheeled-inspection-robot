@@ -26,7 +26,7 @@
 #define VELOCITY_INTERRUPT_PERIOD 500
 #define WIFI_INTERRUPT_PERIOD 200
 #define MPU_INTERRUPT_PERIOD 1
-#define ENCODER_INTERRUPT_FREQUENCY_DIVISOR 20
+#define ENCODER_INTERRUPT_FREQUENCY_DIVISOR 1
 #define ENCODER_CONSTANT 0.46
 
 #define ACCELEROMETER_SENSITIVITY 8192.0
@@ -48,6 +48,7 @@ struct MeasuredData {
 	float vr;
 	uint8_t dir;
 	int16_t pid;
+	int pidPosition;
 };
 
 //Calculated constants
@@ -121,9 +122,18 @@ volatile bool mpu_flag;
 //float kp = 0.6; //avg 10 + med 3 11.1 V
 //float ki = 0.019;
 //float kd = 0.59;
-float kp = 0.6; //avg 10, 11.6 V - BEZ MEDIANY, BALANSUJE
-float ki = 0.013;
-float kd = 0.57;
+//float kp = 0.6; //avg 10, 11.6 V - BEZ MEDIANY, BALANSUJE
+//float ki = 0.013;
+//float kd = 0.57;
+//float kp = 0.6; //avg 10, 12.6 V - BEZ MEDIANY, BALANSUJE
+//float ki = 0.011;
+//float kd = 0.578;
+//float kp = 0.6; //avg 10, 11.6 V - BEZ MEDIANY, BALANSUJE
+//float ki = 0.011;
+//float kd = 0.5775;
+float kp = 0.019; //avg 10, 11.6 V - BEZ MEDIANY, BALANSUJE
+float ki = 0.011;
+float kd = 0;
 //Complementary filter values, A for angle and B for angular acceleration
 float kA = 1.5;
 float kB = 2;
@@ -138,7 +148,7 @@ void SysTick_Handler()
 {
 	if(timer_ms) timer_ms--;
 	global_time_ms++;
-	//if(!(global_time_ms % VELOCITY_INTERRUPT_PERIOD)) velocity_flag = true;
+	if(!(global_time_ms % VELOCITY_INTERRUPT_PERIOD)) velocity_flag = true;
 	if(!(global_time_ms % WIFI_INTERRUPT_PERIOD)) uart_flag = true;
 	if(!(global_time_ms % MPU_INTERRUPT_PERIOD)) mpu_flag = true;
 }
@@ -152,6 +162,7 @@ void global_variables_init() {
 	measuredData.x = 0;
 	measuredData.vl = 0;
 	measuredData.vr = 0;
+	measuredData.pidPosition = 0;
 	robot_direction_ref = 1;
 
 	velocity_flag = false;
@@ -349,28 +360,28 @@ void mpu_read_data() {
 //101 impulses - 360 degrees
 void EXTI9_5_IRQHandler()
 {
-	if(!((r_encoder_counter++) % ENCODER_INTERRUPT_FREQUENCY_DIVISOR)) {
+//	if(!((r_encoder_counter++) % ENCODER_INTERRUPT_FREQUENCY_DIVISOR)) {
 		if (EXTI_GetITStatus(EXTI_Line9) && (GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_9) == 1)) {
 			if(GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_8) == 0) r_cnt_flag_forward = true;
 			else if(GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_8) == 1) r_cnt_flag_backward = true;
 
 			EXTI_ClearITPendingBit(EXTI_Line9);
 		}
-	} else if(EXTI_GetITStatus(EXTI_Line9)) EXTI_ClearITPendingBit(EXTI_Line9);
+//	} else if(EXTI_GetITStatus(EXTI_Line9)) EXTI_ClearITPendingBit(EXTI_Line9);
 }
 
 //Left encoder handler
 //101 impulses - 360 degrees
 void EXTI15_10_IRQHandler()
 {
-	if(!((l_encoder_counter++) % ENCODER_INTERRUPT_FREQUENCY_DIVISOR)) {
+	//if(!((l_encoder_counter++) % ENCODER_INTERRUPT_FREQUENCY_DIVISOR)) {
 		if (EXTI_GetITStatus(EXTI_Line11) && (GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_11) == 1)) {
 			if(GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_10) == 0) l_cnt_flag_backward = true;
 			else if(GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_10) == 1) l_cnt_flag_forward = true;
 
 			EXTI_ClearITPendingBit(EXTI_Line11);
 		}
-	} else if(EXTI_GetITStatus(EXTI_Line11)) EXTI_ClearITPendingBit(EXTI_Line11);
+//	} else if(EXTI_GetITStatus(EXTI_Line11)) EXTI_ClearITPendingBit(EXTI_Line11);
 }
 
 //void USART3_IRQHandler(void)
@@ -391,7 +402,7 @@ void EXTI15_10_IRQHandler()
 
 void hardware_setup() {
 	//Encoders initialization
-	//encoder_init();
+	encoder_init();
 	//Motor driver board initialization
 	motor_driver_init();
 	//ESP8266 initialization
@@ -410,10 +421,10 @@ void hardware_setup() {
 
 void export_data_wifi() {
 	printf("%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d;\r\n",
-			(int)measuredData.fx,
+			(int)measuredData.pos_l,
 			(int)measuredData.fy,
 		    (int)measuredData.fz,
-			(int)measuredData.ax,
+			(int)filtered_acc,
 			(int)measuredData.ay,
 			(int)measuredData.az,
 			(int)measuredData.pos_l%360,
@@ -421,8 +432,8 @@ void export_data_wifi() {
 			(int)measuredData.x,
 			(int)measuredData.vl,
 			(int)measuredData.dir,
-			(int)measuredData.pid,
-			(int)measuredData.xr
+			(int)measuredData.pidPosition,
+			(int)measuredData.pidPosition
 			);
 }
 
@@ -439,15 +450,50 @@ void set_direction() {
 	}
 }
 
+int calculate_pid_motor_diff() {
+	static int last_error = 0;
+	static int iterm = 0;
+	static int dterm = 0;
+	int pid;
+	float motorP = 0.2;
+	float motorI = 0;
+	float motorD = 0.1;
+	int error = measuredData.pos_l - measuredData.pos_r;
+
+	iterm += motorI*error;
+	if(iterm > 1000) iterm = 1000;
+	if(iterm < -1000) iterm = -1000;
+	dterm = motorD*(error-last_error);
+
+	pid = motorP*error + iterm - dterm;
+
+	if(pid > 1000) pid = 1000;
+	if(pid < -1000) pid = -1000;
+	last_error = error;
+
+	return pid;
+}
+
 void motor_driver() {
 
 	TIM_OCInitTypeDef channel;
 	TIM_OCStructInit(&channel);
 	channel.TIM_OCMode = TIM_OCMode_PWM1;
 	channel.TIM_OutputState = TIM_OutputState_Enable;
-	channel.TIM_Pulse = abs(robot_velocity_ref);
+
+	int diff = calculate_pid_motor_diff();
+	int pwm_l = robot_velocity_ref;
+	int pwm_r = robot_velocity_ref;
+	//if(pwm_l < 0) pwm_l = 0;
+	//if(pwm_r < 0) pwm_r = 0;
+//	if(diff > 0) pwm_r += diff;
+//	else if(diff < 0) pwm_l += diff;
+//	if(pwm_l > 1000) pwm_l = 1000;
+//	if(pwm_r > 1000) pwm_r = 1000;
+
+	channel.TIM_Pulse = abs(pwm_l); //L
 	TIM_OC3Init(TIM4, &channel);
-	channel.TIM_Pulse = abs(robot_velocity_ref);
+	channel.TIM_Pulse = abs(pwm_r); //R
 	TIM_OC4Init(TIM4, &channel);
 
 	set_direction();
@@ -474,29 +520,163 @@ void motor_driver() {
 //    }
 //}
 
-void calculate_pid_output(int angle) {
+void calculate_pid_output(int ref_angle, int angle) {
 
 	static int last_error = 0;
 	static int iterm = 0;
 	static int dterm = 0;
 	int pid;
+	int error = ref_angle + angle;
 
-	iterm += ki*angle;
+	iterm += ki*error;
 	if(iterm > 1000) iterm = 1000;
 	if(iterm < -1000) iterm = -1000;
-	dterm = kd*(angle-last_error);
+	dterm = kd*(error-last_error);
 
-	pid = kp*angle + iterm - dterm;
+	pid = kp*error + iterm - dterm;
 
 	if(pid >= 0) robot_direction_ref = 1;
 	else robot_direction_ref = 0;
 
 	if(pid > 1000) pid = 1000;
 	if(pid < -1000) pid = -1000;
+	last_error = error;
 
 	measuredData.pid = pid;
 
 	robot_velocity_ref = abs(pid);
+}
+
+
+int calculate_ref_pid_position(int ref_position) {
+
+	static bool isBusy = false;
+	static int pid = 0;
+
+	if(((measuredData.dir == 0) && (measuredData.pos_l < 0))
+	  || ((measuredData.dir == 1) && (measuredData.pos_l > 0))) {
+		isBusy = false;
+		return 0;
+	}
+	if(isBusy) return pid;
+
+	static int last_error = 0;
+	static int iterm = 0;
+	static int dterm = 0;
+	float pathP = 3;
+	float pathI = 0;
+	float pathD = 0;
+
+	int error = ref_position + measuredData.pos_l;
+
+	int saturation = measuredData.pos_l;
+
+	iterm += pathI*error;
+	if(iterm > saturation) iterm = saturation;
+	if(iterm < -saturation) iterm = -saturation;
+	dterm = pathD*(error-last_error);
+
+	pid = pathP*error + iterm - dterm;
+
+	if(pid > saturation) pid = saturation;
+	if(pid < -saturation) pid = -saturation;
+
+	measuredData.az = pid;
+
+	return pid;
+}
+
+
+int calculate_pid_position(int ref_position, int filtered_data) {
+
+	//ref_position = calculate_ref_pid_position(ref_position);
+
+	static int last_error = 0;
+	static int iterm = 0;
+	static int dterm = 0;
+	float pathP = 0.01;
+	float pathI = 0;
+	float pathD = 0;
+
+	int pid;
+	int error = ref_position + measuredData.pos_l /*+ filtered_data/5*/;
+
+	int saturation = 300;
+
+	iterm += pathI*error;
+	if(iterm > saturation) iterm = saturation;
+	if(iterm < -saturation) iterm = -saturation;
+	dterm = pathD*(error-last_error);
+
+	pid = pathP*error + iterm - dterm;
+
+	if(pid > saturation) pid = saturation;
+	if(pid < -saturation) pid = -saturation;
+	last_error = error;
+
+	measuredData.pidPosition = pid;
+
+	return pid;
+}
+
+int stop_robot_angle() {
+	static int last_error = 0;
+	static int iterm = 0;
+	static int dterm = 0;
+	static int last_pos = 0;
+	float pathP = 10;
+	float pathI = 0.2;
+	float pathD = 8;
+
+	int pid;
+	int error = 0;
+
+	int saturation = 3000;
+
+	iterm += pathI*error;
+	if(iterm > saturation) iterm = saturation;
+	if(iterm < -saturation) iterm = -saturation;
+	dterm = pathD*(error-last_error);
+
+	pid = pathP*error + iterm - dterm;
+
+	if(pid > saturation) pid = saturation;
+	if(pid < -saturation) pid = -saturation;
+
+	measuredData.pidPosition = pid;
+
+	return pid;
+}
+
+int calculate_angle_from_position(int ref_speed) {
+	static int last_error = 0;
+	static int iterm = 0;
+	static int dterm = 0;
+	static int last_pos = 0;
+	float pathP = 500;
+	float pathI = 0;
+	float pathD = 0;
+
+	int pid;
+	int error = ref_speed + (measuredData.pos_l - last_pos);
+
+	int saturation = 3000;
+
+	iterm += pathI*error;
+	if(iterm > saturation) iterm = saturation;
+	if(iterm < -saturation) iterm = -saturation;
+	dterm = pathD*(error-last_error);
+
+	pid = pathP*error + iterm - dterm;
+
+	if(pid > saturation) pid = saturation;
+	if(pid < -saturation) pid = -saturation;
+	last_error = error;
+	last_pos = measuredData.pos_l;
+
+	measuredData.pidPosition = pid;
+
+	return pid;
 }
 
 int main(void)
@@ -512,6 +692,9 @@ int main(void)
 	float acc_sum = 0;
 	char order = '0';
 	uint8_t buffer_iterator = 0;
+	int ref_angle = 0;
+	int filtered_data = 0;
+	int ref_speed = 0;
 
 	while(1) {
 //		if (USART_GetFlagStatus(USART3, USART_FLAG_RXNE)) {
@@ -560,7 +743,7 @@ int main(void)
 				r_cnt_flag_forward = false;
 		}
 		if(velocity_flag) {
-			//measuredData.xr = measuredData.pos_r*position_constant;
+			measuredData.xr = measuredData.pos_r*position_constant;
 			measuredData.x = measuredData.pos_l*position_constant;
 			measuredData.vl = (measuredData.x-last_x)*2;
 			last_x = measuredData.x;
@@ -592,7 +775,11 @@ int main(void)
 					acc_sum = 0;
 					//if()
 					//if(filtered_angle*filtered_acc > 0) kB = 0;
-					calculate_pid_output((int)(kA*filtered_angle) + (int)(kB*filtered_acc));
+					filtered_data = kA*filtered_angle + kB*filtered_acc;
+					//ref_speed = calculate_pid_position(0, filtered_data);
+					ref_angle = calculate_angle_from_position(0);
+//					ref_angle = stop_robot_angle();
+					calculate_pid_output(ref_angle, filtered_data);
 			//calculate_pid_output(kA*measuredData.fx + kB*measuredData.ax);
 					//robot_velocity_ref = 0;
 					//robot_velocity_ref = 1;
