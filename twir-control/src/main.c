@@ -421,7 +421,7 @@ void hardware_setup() {
 
 void export_data_wifi() {
 	printf("%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d;\r\n",
-			(int)measuredData.pos_l,
+			(int)filtered_angle,
 			(int)measuredData.fy,
 		    (int)measuredData.fz,
 			(int)filtered_acc,
@@ -432,7 +432,7 @@ void export_data_wifi() {
 			(int)measuredData.x,
 			(int)measuredData.vl,
 			(int)measuredData.dir,
-			(int)measuredData.pidPosition,
+			(int)measuredData.pid,
 			(int)measuredData.pidPosition
 			);
 }
@@ -653,14 +653,14 @@ int calculate_angle_from_position(int ref_speed) {
 	static int iterm = 0;
 	static int dterm = 0;
 	static int last_pos = 0;
-	float pathP = 500;
+	float pathP = 2100;
 	float pathI = 0;
 	float pathD = 0;
 
 	int pid;
 	int error = ref_speed + (measuredData.pos_l - last_pos);
 
-	int saturation = 3000;
+	int saturation = 5000;
 
 	iterm += pathI*error;
 	if(iterm > saturation) iterm = saturation;
