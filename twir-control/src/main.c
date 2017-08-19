@@ -31,7 +31,9 @@ struct MeasuredData {
 	float vr;
 	uint8_t dir;
 	int16_t pid;
-	int pos_dif
+	int pos_dif;
+	int motor_dif;
+	int pid_motor;
 	int pid_position;
 	int battery_state;
 };
@@ -109,6 +111,7 @@ volatile bool mpu_flag;
 volatile bool battery_flag;
 
 volatile bool start_flag;
+volatile bool execute_flag;
 
 // Main timer interrupt handler
 void SysTick_Handler();
@@ -119,7 +122,7 @@ void init_flags();
 // All table type global variables initialization
 void set_tables();
 // All structure type global variables initialization
-void init_pid_structure(struct DataPID &data_pid, const float kP, const float kI, const float kD, const int saturation);
+void init_pid_structure(struct DataPID *data_pid, const float kP, const float kI, const float kD, const int saturation);
 // Main file's global variables initialization
 void global_variables_init();
 // Absolute integer calculating function
@@ -127,18 +130,18 @@ int abs(int x);
 // Median of 3 float values calculating function
 float median(float value[]);
 // Integration anti-windup
-void anti-windup(struct DataPID &data_pid);
+void anti_windup(struct DataPID *data_pid);
 // Numerical integration
-void integrate(struct DataPID &data_pid);
+void integrate(struct DataPID *data_pid);
 // Numerical differentiation without involving time - operating just on value differences
-void differentiate(struct DataPID &data_pid);
+void differentiate(struct DataPID *data_pid);
 // Calculate PID output using calculated integration and differentiation terms
-int get_pid(struct DataPID &data_pid);
+int get_pid(struct DataPID *data_pid);
 // PID regulator implementation
-int calculate_pid(struct DataPID &data_pid);
-
+int calculate_pid(struct DataPID *data_pid);
+//
 void left_encoder_init();
-
+//
 void right_encoder_init();
 // Both motors magnetic encoders initialization
 // Rising Edge activated interrupts, 101 impulses for 1 rotation, 
@@ -195,6 +198,8 @@ int calculate_angle_from_speed(int ref_speed);
 void set_reference_direction();
 // Takes filtered angle and calculates reference PWM duty cycle using PID regulator (ref_angle = 0: balanced robot)
 void calculate_pid_output(int ref_angle, int angle);
+// Interprate orders sent from ESP8266
+void get_order();
 // Checks *_cnt_flag_* flags and updates motors' shafts position and measured moving direction
 void update_encoder_values();
 // Checks velocity_flag and updates robot linear position and velocity which will be send to ESP8266 module
@@ -233,7 +238,7 @@ void SysTick_Handler() {
 	if(!(global_time_ms % VELOCITY_INTERRUPT_PERIOD_MS)) velocity_flag = true;
 	if(!(global_time_ms % WIFI_INTERRUPT_PERIOD_MS)) uart_flag = true;
 	if(!(global_time_ms % MPU_INTERRUPT_PERIOD_MS)) mpu_flag = true;
-	IF(!(global_time_ms % BATTERY_STATUS_PERIOD_MS)) battery_flag = true;
+	if(!(global_time_ms % BATTERY_STATUS_PERIOD_MS)) battery_flag = true;
 }
 
 void init_reference_values() {
@@ -251,13 +256,15 @@ void init_flags() {
 	r_cnt_flag_backward = false;
 	mpu_flag = false;
 	battery_flag = false;
+
 	start_flag = false;
+	execute_flag = false;
 }
 
 void set_tables() {
-	int i = 0;
+	int i;
 	
-	for(i; i<6; i++) {
+	for(i = 0; i<6; i++) {
 		gyro[i] = 0;
 	}
 	for(i=0; i<10; i++) {
@@ -265,15 +272,15 @@ void set_tables() {
 	}
 }
 
-void init_pid_structure(struct DataPID &data_pid, const float kP, const float kI, const float kD, const int saturation) {
-	data_pid.kP = kP;
-	data_pid.kI = kI;
-	data_pid.kD = kD;
-	data_pid.saturation = saturation;
-	data_pid.last_error = 0;
-	data_pid.iterm = 0;
-	data_pid.dterm = 0;
-	data_pid.error = 0;
+void init_pid_structure(struct DataPID *data_pid, const float kP, const float kI, const float kD, const int saturation) {
+	data_pid->kP = kP;
+	data_pid->kI = kI;
+	data_pid->kD = kD;
+	data_pid->saturation = saturation;
+	data_pid->last_error = 0;
+	data_pid->iterm = 0;
+	data_pid->dterm = 0;
+	data_pid->error = 0;
 }
 
 void global_variables_init() {
@@ -281,9 +288,9 @@ void global_variables_init() {
 
 	init_flags();
 	
-	init_pid_structure(motor_driver_pid, MOTOR_KP, MOTOR_KI, MOTOR_KD, MOTOR_SATURATION);
-	init_pid_structure(balance_pid, BALANCE_KP, BALANCE_KI, BALANCE_KD, BALANCE_SATURATION);
-	init_pid_structure(velocity_pid, VELOCITY_KP, VELOCITY_KI, VELOCITY_KD, VELOCITY_SATURATION);
+	init_pid_structure(&motor_driver_pid, MOTOR_KP, MOTOR_KI, MOTOR_KD, MOTOR_SATURATION);
+	init_pid_structure(&balance_pid, BALANCE_KP, BALANCE_KI, BALANCE_KD, BALANCE_SATURATION);
+	init_pid_structure(&velocity_pid, VELOCITY_KP, VELOCITY_KI, VELOCITY_KD, VELOCITY_SATURATION);
 
 	set_tables();
 }
@@ -304,38 +311,38 @@ float median(float value[]) {
 						c);
 }
 
-void anti-windup(struct DataPID &data_pid) {
-	if(data_pid.iterm > data_pid.saturation) data_pid.iterm = data_pid.saturation;
-	if(data_pid.iterm < -data_pid.saturation) data_pid.iterm = -data_pid.saturation;
+void anti_windup(struct DataPID *data_pid) {
+	if(data_pid->iterm > data_pid->saturation) data_pid->iterm = data_pid->saturation;
+	if(data_pid->iterm < -data_pid->saturation) data_pid->iterm = -data_pid->saturation;
 }
 
-void integrate(struct DataPID &data_pid) {
-	data_pid.iterm += data_pid.kI * data_pid.error;
+void integrate(struct DataPID *data_pid) {
+	data_pid->iterm += data_pid->kI * data_pid->error;
 	
-	anti-windup(data_pid);
+	anti_windup(data_pid);
 }
 
-void differentiate(struct DataPID &data_pid) {
-	data_pid.dterm = data_pid.kD * (data_pid.error - data_pid.last_error);
-	data_pid.last_error = data_pid.error;
+void differentiate(struct DataPID *data_pid) {
+	data_pid->dterm = data_pid->kD * (data_pid->error - data_pid->last_error);
+	data_pid->last_error = data_pid->error;
 }
 
-int get_pid(struct DataPID &data_pid) {
+int get_pid(struct DataPID *data_pid) {
 	int pid = 0;
 	
-	pid = data_pid.kP * data_pid.error + data_pid.iterm - data_pid.dterm;
+	pid = data_pid->kP * data_pid->error + data_pid->iterm - data_pid->dterm;
 	
-	if(pid > data_pid.saturation) pid = data_pid.saturation;
-	if(pid < -data_pid.saturation) pid = -data_pid.saturation;
+	if(pid > data_pid->saturation) pid = data_pid->saturation;
+	if(pid < -data_pid->saturation) pid = -data_pid->saturation;
 	
 	return pid;
 }
 
-int calculate_pid(struct DataPID &data_pid) {
+int calculate_pid(struct DataPID *data_pid) {
 	integrate(data_pid);
 	differentiate(data_pid);
 	
-	return get_pid(data_pid)
+	return get_pid(data_pid);
 }
 
 void left_encoder_init() {
@@ -433,8 +440,6 @@ void motor_pwm_timer_init() {
 
 void motor_left_init() {
 	GPIO_InitTypeDef gpio;
-	TIM_TimeBaseInitTypeDef tim;
-	TIM_OCInitTypeDef channel;
 	
 	RCC_APB2PeriphClockCmd(MOTOR_DIR_LEFT_A_RCC | MOTOR_DIR_LEFT_B_RCC, ENABLE);
 	
@@ -448,8 +453,6 @@ void motor_left_init() {
 
 void motor_right_init() {
 	GPIO_InitTypeDef gpio;
-	TIM_TimeBaseInitTypeDef tim;
-	TIM_OCInitTypeDef channel;
 	
 	RCC_APB2PeriphClockCmd(MOTOR_DIR_RIGHT_A_RCC | MOTOR_DIR_RIGHT_B_RCC, ENABLE);
 	
@@ -565,13 +568,13 @@ int get_position_change_difference() {
 
 int calculate_pid_motor_diff() {
 	motor_driver_pid.error = get_position_change_difference();
-	measuredData.pid_motor = calculate_pid(motor_driver_pid);
+	measuredData.pid_motor = calculate_pid(&motor_driver_pid);
 	
 	return measuredData.pid_motor;
 }
 
 void set_equal_motors_speed() {
-	int diff = calculate_pid_motor_diff();
+	int diff = 0;//calculate_pid_motor_diff();
 	uint16_t pwm_l = robot_velocity_ref;
 	uint16_t pwm_r = robot_velocity_ref;
 	
@@ -591,15 +594,15 @@ void motor_driver() {
 int get_position_difference(int ref_speed) {
 	static int last_pos = 0;
 	
-	mesauredData.pos_dif = ref_speed + (measuredData.pos_l - last_pos);
+	measuredData.pos_dif = ref_speed + (measuredData.pos_l - last_pos);
 	last_pos = measuredData.pos_l;
 	
-	return mesauredData.pos_dif;
+	return measuredData.pos_dif;
 }
 
 int calculate_angle_from_speed(int ref_speed) {
-	velocity_pid.error = get_postion_difference(ref_speed);
-	measuredData.pid_position = calculate_pid(velocity_pid);
+	velocity_pid.error = get_position_difference(ref_speed);
+	measuredData.pid_position = calculate_pid(&velocity_pid);
 
 	return measuredData.pid_position;
 }
@@ -611,9 +614,17 @@ void set_reference_direction() {
 
 void calculate_pid_output(int ref_angle, int angle) {
 	balance_pid.error = ref_angle + angle;
-	measuredData.pid = calculate_pid(balance_pid);
+	measuredData.pid = calculate_pid(&balance_pid);
 	set_reference_direction();
-	robot_velocity_ref = abs(pid);
+	robot_velocity_ref = abs(measuredData.pid);
+}
+
+void get_order() {
+	if(!execute_flag) return;
+
+	//TODO
+
+	execute_flag = false;
 }
 
 void update_encoder_values() {
@@ -640,6 +651,8 @@ void update_encoder_values() {
 void update_linear_postion() {
 	if(!velocity_flag) return;
 	
+	static int last_x = 0;
+
 	measuredData.xr = measuredData.pos_r * POSITION_CONSTANT;
 	measuredData.xl = measuredData.pos_l * POSITION_CONSTANT;
 	measuredData.vl = (measuredData.xl - last_x) * VELOCITY_CONSTANT;
@@ -680,8 +693,7 @@ void correct_robot_position() {
 	if(!start_flag) return;
 	
 	filtered_balancing_data = simple_complementary_filter();
-	ref_angle = calculate_angle_from_speed(robot_linear_velocity_ref);
-	calculate_pid_output(ref_angle, filtered_balancing_data);
+	calculate_pid_output(calculate_angle_from_speed(robot_linear_velocity_ref), filtered_balancing_data);
 	motor_driver();
 	
 	start_flag = false;
@@ -699,6 +711,7 @@ void stabilize() {
 
 void start() {
 	while(1) {
+		get_order();
 		update_encoder_values();
 		update_linear_postion();
 		update_battery_state();
@@ -709,10 +722,10 @@ void start() {
 
 void export_data_wifi() {
 	printf("%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d;\r\n",
-			(int)filtered_angle/MPU_CONSTANT,
+			(int)filtered_angle,
 			(int)measuredData.fy,
 		    (int)measuredData.fz,
-			(int)filtered_acc/MPU_CONSTANT,
+			(int)filtered_acc,
 			(int)measuredData.ay,
 			(int)measuredData.az,
 			(int)measuredData.pos_l%360,

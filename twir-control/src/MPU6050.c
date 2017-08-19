@@ -30,6 +30,7 @@
 
 /* Includes */
 #include "MPU6050.h"
+#include "properties.h"
 #include "stm32f10x_i2c.h"
 
 /** @defgroup MPU6050_Library
