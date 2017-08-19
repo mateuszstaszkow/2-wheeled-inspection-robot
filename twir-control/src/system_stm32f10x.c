@@ -70,6 +70,7 @@
   */
  
 /* Includes ------------------------------------------------------------------*/
+#include "properties.h"
 #include "stm32f10x.h"
 
 /** @addtogroup Projects
@@ -117,7 +118,7 @@
 
 //#define PLL_SOURCE_HSE_BYPASS   // HSE bypassed with an external clock (8MHz, coming from ST-Link) used to clock
 
-  uint32_t SystemCoreClock = 72000000;
+  uint32_t SystemCoreClock = STM32_SYSTEM_CORE_CLOCK;
 
 __I uint8_t AHBPrescTable[16] = {0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 3, 4, 6, 7, 8, 9};
 

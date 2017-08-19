@@ -42,6 +42,9 @@
  * to their most sensitive settings, namely +/- 2g and +/- 250 degrees/sec, and sets
  * the clock source to use the X Gyro for reference, which is slightly better than
  * the default internal clock source.
+ * 
+ * *** Added filter initialization ***
+ * 
  */
 void MPU6050_Initialize()
 {
@@ -49,6 +52,8 @@ void MPU6050_Initialize()
     MPU6050_SetFullScaleGyroRange(MPU6050_GYRO_FS_250);
     MPU6050_SetFullScaleAccelRange(MPU6050_ACCEL_FS_2);
     MPU6050_SetSleepModeStatus(DISABLE);
+	MPU6050_set_DLPF_mode(6);
+	MPU6050_set_DHPF_mode(1);
 }
 
 /** Verify the I2C connection.
