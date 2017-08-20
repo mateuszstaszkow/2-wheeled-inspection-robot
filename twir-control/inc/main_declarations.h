@@ -12,6 +12,7 @@
 
 // Motors' speed when doing partial rotation for next scan
 static const int SCAN_ROTATION_SPEED = 300;
+static const uint32_t SCAN_ROTATION_TIME = 40;
 
 // Global variables
 int16_t robot_turn_speed_ref;

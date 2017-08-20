@@ -117,7 +117,7 @@ void turn_right() {
 void rotate_robot() {
 	static uint32_t current_time = 0;
 
-	if(busy_turning_flag && ((global_time_ms - current_time) > 40)) {
+	if(busy_turning_flag && ((global_time_ms - current_time) > SCAN_ROTATION_TIME)) {
 		busy_turning_flag = false;
 		turn_flag = false;
 		return;

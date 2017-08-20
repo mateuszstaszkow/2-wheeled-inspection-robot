@@ -27,6 +27,9 @@ static const float VELOCITY_KP = 12;
 static const float VELOCITY_KI = 0;
 static const float VELOCITY_KD = 0;
 static const int VELOCITY_SATURATION = 5000;
+// Additional filter values, A for linear velocity and B for angular acceleration
+static const float VELOCITY_KA = 100;
+static const float VELOCITY_KB = 0.01;
 
 // Global variables
 float filtered_angle;

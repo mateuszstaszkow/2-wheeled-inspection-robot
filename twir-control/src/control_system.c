@@ -3,7 +3,7 @@
 int get_position_difference(int ref_speed) {
 	static int last_pos = 0;
 	
-	measuredData.pos_dif = ref_speed + (measuredData.pos_l - last_pos) * 100 + (int)(measuredData.ax / 100);
+	measuredData.pos_dif = ref_speed + (int)((measuredData.pos_l - last_pos) * VELOCITY_KA) + (int)(measuredData.ax * VELOCITY_KB);
 	last_pos = measuredData.pos_l;
 	
 	return measuredData.pos_dif;
