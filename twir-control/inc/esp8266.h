@@ -9,6 +9,10 @@
 #define ESP8266_H_
 
 #include "stm32f10x.h"
+#include "properties.h"
+
+// ESP8266 RX buffer
+char esp_buffer[10];
 
 void esp_init();
 
