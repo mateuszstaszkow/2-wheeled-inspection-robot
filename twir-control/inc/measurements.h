@@ -1,8 +1,9 @@
 #ifndef MEASUREMENTS_H_
 #define MEASUREMENTS_H_
 
-#include "properties.h"
 #include "main_declarations.h"
+#include "MPU6050.h"
+#include "properties.h"
 
 // Structure with exportable data
 struct MeasuredData {
@@ -28,12 +29,12 @@ struct MeasuredData {
 };
 
 // Calculated constants
-extern const float ANGLE_CONSTANT = ROTATION_CONSTANT * ENCODER_INTERRUPT_FREQUENCY_DIVISOR * ENCODER_CONSTANT;
-extern const float POSITION_CONSTANT = DISTANCE_CONSTANT * WHEEL_DIAMETER * PI / 360;
-extern const int VELOCITY_CONSTANT = 1000 / VELOCITY_INTERRUPT_PERIOD_MS;
+static const float ANGLE_CONSTANT = ROTATION_CONSTANT * ENCODER_INTERRUPT_FREQUENCY_DIVISOR * ENCODER_CONSTANT;
+static const float POSITION_CONSTANT = DISTANCE_CONSTANT * WHEEL_DIAMETER * PI / 360;
+static const int VELOCITY_CONSTANT = 1000 / VELOCITY_INTERRUPT_PERIOD_MS;
 
 // MPU6050 raw data vector
-extern s16 gyro[6];
+s16 gyro[6];
 
 // Gathers raw angle and angular acceleration data for six axises, range of values from -16000 to +16000
 // Values can be converted to degrees by using MPU_CONSTANT

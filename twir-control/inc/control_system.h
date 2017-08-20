@@ -3,44 +3,33 @@
 
 #include "main_declarations.h"
 #include "math_pid.h"
+#include "measurements.h"
 #include "properties.h"
-
-// Structure with all PID regulator data
-struct DataPID {
-	float kP;
-	float kI;
-	float kD;
-	int saturation;
-	float last_error;
-	float iterm;
-	float dterm;
-	float error;
-};
 
 // Balance regulator constants
 // PID regulator
-extern const float BALANCE_KP = 0.019;
-extern const float BALANCE_KI = 0.011;
-extern const float BALANCE_KD = 0;
-extern const int BALANCE_SATURATION = 1000;
+static const float BALANCE_KP = 0.019;
+static const float BALANCE_KI = 0.011;
+static const float BALANCE_KD = 0;
+static const int BALANCE_SATURATION = 1000;
 // Complementary filter values, A for angle and B for angular acceleration
-extern const float BALANCE_KA = 1.5;
-extern const float BALANCE_KB = 2;
+static const float BALANCE_KA = 1.5;
+static const float BALANCE_KB = 2;
 // Average value filtering
-extern const uint8_t BALANCE_AVERAGE = 10;
+static const uint8_t BALANCE_AVERAGE = 10;
 
 // Linear velocity regulator constants
-extern const float VELOCITY_KP = 2100;
-extern const float VELOCITY_KI = 0;
-extern const float VELOCITY_KD = 0;
-extern const int VELOCITY_SATURATION = 5000;
+static const float VELOCITY_KP = 2100;
+static const float VELOCITY_KI = 0;
+static const float VELOCITY_KD = 0;
+static const int VELOCITY_SATURATION = 5000;
 
 // Global variables
-extern float filtered_angle;
-extern float filtered_acc;
-extern float filtered_balancing_data;
-extern struct DataPID balance_pid;
-extern struct DataPID velocity_pid;
+float filtered_angle;
+float filtered_acc;
+float filtered_balancing_data;
+struct DataPID balance_pid;
+struct DataPID velocity_pid;
 
 // Calculates position difference comparing impulses from encoders
 int get_position_difference(int ref_speed);

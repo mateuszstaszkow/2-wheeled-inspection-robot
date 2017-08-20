@@ -1,6 +1,8 @@
 #ifndef __PROPERTIES_H
 #define __PROPERTIES_H
 
+#include "stm32f10x.h"
+
 // STM32F103RBT6 Hardware setup
 
 #define STM32_SYSTEM_CORE_CLOCK				72000000

@@ -2,20 +2,14 @@
 #define MOTOR_H_
 
 #include "encoder.h"
-#include "main_declarations.h"
 #include "math_pid.h"
 #include "properties.h"
 
 // Motor driver regulator constants
-extern const float MOTOR_KP = 1;
-extern const float MOTOR_KI = 0;
-extern const float MOTOR_KD = 0;
-extern const int MOTOR_SATURATION = 1000;
-
-// Global variables
-extern int16_t robot_velocity_ref;
-extern uint8_t robot_direction_ref;
-extern struct DataPID motor_driver_pid;
+static const float MOTOR_KP = 0;
+static const float MOTOR_KI = 0;
+static const float MOTOR_KD = 0;
+static const int MOTOR_SATURATION = 1000;
 
 // Both motors PWM pins initialization, PWM pins are hardcoded, see properties.h
 void motor_pwm_pins_init();

@@ -1,6 +1,18 @@
 #ifndef MATH_PID_H_
 #define MATH_PID_H_
 
+// Structure with all PID regulator data
+struct DataPID {
+	float kP;
+	float kI;
+	float kD;
+	int saturation;
+	float last_error;
+	float iterm;
+	float dterm;
+	float error;
+};
+
 // Absolute integer calculating function
 int abs(int x);
 // Median of 3 float values calculating function

@@ -1,4 +1,5 @@
 #include "motor.h"
+#include "main_declarations.h"
 
 void motor_pwm_pins_init() {
 	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOB, ENABLE);

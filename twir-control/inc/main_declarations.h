@@ -9,22 +9,24 @@
 #include "motor.h"
 #include "MPU6050.h"
 #include "properties.h"
-#include "stm32f10x.h"
 
 // Global variables
-extern int16_t robot_turn_speed_ref;
-extern int16_t robot_linear_velocity_ref;
-extern volatile uint32_t global_time_ms;
-extern struct MeasuredData measuredData;
+int16_t robot_turn_speed_ref;
+int16_t robot_linear_velocity_ref;
+int16_t robot_velocity_ref;
+uint8_t robot_direction_ref;
+volatile uint32_t global_time_ms;
+struct MeasuredData measuredData;
+struct DataPID motor_driver_pid;
 
 // Interrupt flags
-extern volatile bool velocity_flag;
-extern volatile bool uart_flag;
-extern volatile bool mpu_flag;
-extern volatile bool battery_flag;
+volatile bool velocity_flag;
+volatile bool uart_flag;
+volatile bool mpu_flag;
+volatile bool battery_flag;
 
-extern volatile bool start_flag;
-extern volatile bool execute_flag;
+volatile bool start_flag;
+volatile bool execute_flag;
 
 // Main timer interrupt handler
 void SysTick_Handler();
