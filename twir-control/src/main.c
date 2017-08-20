@@ -23,6 +23,7 @@ void SysTick_Handler() {
 	if(!(global_time_ms % WIFI_INTERRUPT_PERIOD_MS)) uart_flag = true;
 	if(!(global_time_ms % MPU_INTERRUPT_PERIOD_MS)) mpu_flag = true;
 	if(!(global_time_ms % BATTERY_STATUS_PERIOD_MS)) battery_flag = true;
+	if(!(global_time_ms % ROBOT_SINGLE_TURN_PERIOD_MS) && turn_mode_flag) turn_flag = true;
 }
 
 void init_reference_values() {
@@ -44,6 +45,9 @@ void init_flags() {
 
 	start_flag = false;
 	execute_flag = false;
+	turn_flag = false;
+	busy_turning_flag = false;
+	turn_mode_flag = true;
 }
 
 void set_tables() {
@@ -102,13 +106,40 @@ void get_order() {
 	execute_flag = false;
 }
 
+void turn_right() {
+	set_forward_direction_left();
+	set_backward_direction_right();
+	set_pwm(SCAN_ROTATION_SPEED, SCAN_ROTATION_SPEED);
+
+	busy_turning_flag = true;
+}
+
+void rotate_robot() {
+	static uint32_t current_time = 0;
+
+	if(busy_turning_flag && ((global_time_ms - current_time) > 40)) {
+		busy_turning_flag = false;
+		turn_flag = false;
+		return;
+	} else if(busy_turning_flag) {
+		return;
+	}
+
+	current_time = global_time_ms;
+	turn_right();
+}
+
 void correct_robot_position() {
 	if(!start_flag) return;
 	
-	filtered_balancing_data = simple_complementary_filter();
-	calculate_pid_output(calculate_angle_from_speed(robot_linear_velocity_ref), filtered_balancing_data);
-	motor_driver(robot_turn_speed_ref);
-	
+	if((!turn_flag || is_balanced()) && !busy_turning_flag) {
+		filtered_balancing_data = simple_complementary_filter();
+		calculate_pid_output(calculate_angle_from_speed(robot_linear_velocity_ref), filtered_balancing_data);
+		motor_driver(robot_turn_speed_ref);
+	} else {
+		rotate_robot();
+	}
+
 	start_flag = false;
 }
 

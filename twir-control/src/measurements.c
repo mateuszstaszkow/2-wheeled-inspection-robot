@@ -4,7 +4,7 @@ void mpu_read_data() {
 	MPU6050_GetRawAccelGyro(gyro);
 	measuredData.fx = gyro[0];
 	measuredData.fy = gyro[1]/MPU_CONSTANT;
-	measuredData.fz = gyro[2]/MPU_CONSTANT;
+	measuredData.fz += (gyro[5]/MPU_CONSTANT);
 	measuredData.ax = gyro[4];
 	measuredData.ay = gyro[3]/MPU_CONSTANT;
 	measuredData.az = gyro[5]/MPU_CONSTANT;

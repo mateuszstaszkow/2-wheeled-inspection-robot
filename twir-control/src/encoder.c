@@ -38,7 +38,7 @@ void right_encoder_init() {
 	GPIO_Init(ENCODER_RIGHT_Port, &gpio);
 
 	EXTI_StructInit(&exti);
-	exti.EXTI_Line = ENCODER_LEFT_Interrupt_Line;
+	exti.EXTI_Line = ENCODER_RIGHT_Interrupt_Line;
 	exti.EXTI_Mode = EXTI_Mode_Interrupt;
 	exti.EXTI_Trigger = EXTI_Trigger_Rising;
 	exti.EXTI_LineCmd = ENABLE;

@@ -10,6 +10,9 @@
 #include "MPU6050.h"
 #include "properties.h"
 
+// Motors' speed when doing partial rotation for next scan
+static const int SCAN_ROTATION_SPEED = 300;
+
 // Global variables
 int16_t robot_turn_speed_ref;
 int16_t robot_linear_velocity_ref;
@@ -27,6 +30,9 @@ volatile bool battery_flag;
 
 volatile bool start_flag;
 volatile bool execute_flag;
+volatile bool turn_flag;
+volatile bool busy_turning_flag;
+volatile bool turn_mode_flag;
 
 // Main timer interrupt handler
 void SysTick_Handler();
@@ -46,6 +52,10 @@ void global_timer_init();
 void hardware_setup();
 // Interprate orders sent from ESP8266
 void get_order();
+// Partial robot rotation for a next scan
+void turn_right();
+//
+void rotate_robot();
 // Checks start_flag and run all regulators
 void correct_robot_position();
 // Main program function, waits for mpu_flag, invokes all key functions to keep robot balancing

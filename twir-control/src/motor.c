@@ -70,20 +70,35 @@ void motor_driver_init() {
 	motor_right_init();
 }
 
-
-
-void set_forward_direction() {
+void set_forward_direction_left() {
 	GPIO_SetBits(MOTOR_DIR_LEFT_A_Port, MOTOR_DIR_LEFT_A_Pin);
+	GPIO_ResetBits(MOTOR_DIR_LEFT_A_Port, MOTOR_DIR_LEFT_B_Pin);
+}
+
+void set_forward_direction_right() {
 	GPIO_SetBits(MOTOR_DIR_RIGHT_A_Port, MOTOR_DIR_RIGHT_A_Pin);
 	GPIO_ResetBits(MOTOR_DIR_LEFT_A_Port, MOTOR_DIR_LEFT_B_Pin);
 	GPIO_ResetBits(MOTOR_DIR_RIGHT_B_Port, MOTOR_DIR_RIGHT_B_Pin);
 }
 
-void set_backward_direction() {
+void set_forward_direction() {
+	set_forward_direction_left();
+	set_forward_direction_right();
+}
+
+void set_backward_direction_left() {
 	GPIO_SetBits(MOTOR_DIR_LEFT_B_Port, MOTOR_DIR_LEFT_B_Pin);
-	GPIO_SetBits(MOTOR_DIR_RIGHT_B_Port, MOTOR_DIR_RIGHT_B_Pin);
 	GPIO_ResetBits(MOTOR_DIR_LEFT_A_Port, MOTOR_DIR_LEFT_A_Pin);
+}
+
+void set_backward_direction_right() {
+	GPIO_SetBits(MOTOR_DIR_RIGHT_B_Port, MOTOR_DIR_RIGHT_B_Pin);
 	GPIO_ResetBits(MOTOR_DIR_RIGHT_A_Port, MOTOR_DIR_RIGHT_A_Pin);
+}
+
+void set_backward_direction() {
+	set_backward_direction_left();
+	set_backward_direction_right();
 }
 
 void set_direction() {
@@ -125,13 +140,38 @@ int calculate_pid_motor_diff(int ref_speed) {
 	return measuredData.pid_motor;
 }
 
-void set_equal_motors_speed(int ref_speed) {
+void set_real_pwm_values(int ref_speed, int16_t *pwm_l, int16_t *pwm_r) {
 	int diff = calculate_pid_motor_diff(ref_speed);
-	uint16_t pwm_l = robot_velocity_ref;
-	uint16_t pwm_r = robot_velocity_ref;
 	
-	if(diff > 0) pwm_r += diff;
-	else if(diff < 0) pwm_l += diff;
+	if(diff > 0) {
+		(*pwm_r) += diff;
+		(*pwm_l) -= diff;
+	}
+	else if(diff < 0) {
+		(*pwm_l) += diff;
+		(*pwm_r) -= diff;
+	}
+}
+
+void set_motors_directions(int16_t *pwm_l, int16_t *pwm_r) {
+	if((*pwm_l) < 0) {
+		(*pwm_l) = -(*pwm_l);
+		if(robot_direction_ref) set_backward_direction_left();
+		else set_forward_direction_left();
+	} else if((*pwm_r) < 0) {
+		(*pwm_r) = -(*pwm_r);
+		if(robot_direction_ref) set_backward_direction_right();
+		else set_forward_direction_right();
+	}
+}
+
+void set_equal_motors_speed(int ref_speed) {
+	int16_t pwm_l = robot_velocity_ref;
+	int16_t pwm_r = robot_velocity_ref;
+
+	set_real_pwm_values(ref_speed, &pwm_l, &pwm_r);
+	set_motors_directions(&pwm_l, &pwm_r);
+
 	if(pwm_l > MOTOR_PWM_PERIOD) pwm_l = MOTOR_PWM_PERIOD;
 	if(pwm_r > MOTOR_PWM_PERIOD) pwm_r = MOTOR_PWM_PERIOD;
 
@@ -139,6 +179,6 @@ void set_equal_motors_speed(int ref_speed) {
 }
 
 void motor_driver(int ref_speed) {
-	set_equal_motors_speed(ref_speed);
 	set_direction();
+	set_equal_motors_speed(ref_speed);
 }

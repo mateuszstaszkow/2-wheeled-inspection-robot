@@ -3,7 +3,7 @@
 int get_position_difference(int ref_speed) {
 	static int last_pos = 0;
 	
-	measuredData.pos_dif = ref_speed + (measuredData.pos_l - last_pos);
+	measuredData.pos_dif = ref_speed + (measuredData.pos_l - last_pos) * 100 + (int)(measuredData.ax / 100);
 	last_pos = measuredData.pos_l;
 	
 	return measuredData.pos_dif;
@@ -47,4 +47,10 @@ void average_filter() {
 
 int simple_complementary_filter() {
 	return BALANCE_KA * filtered_angle + BALANCE_KB * filtered_acc;
+}
+
+bool is_balanced() {
+	return ((abs(filtered_balancing_data) > BALANCED_PID_ERROR) ||
+			(abs(filtered_angle) > BALANCED_ANGLE) ||
+			(abs(measuredData.pos_dif) > BALANCED_SPEED));
 }
