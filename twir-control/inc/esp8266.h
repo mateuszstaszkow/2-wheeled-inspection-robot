@@ -10,6 +10,9 @@
 
 #include "stm32f10x.h"
 
+// ESP8266 RX buffer
+extern char esp_buffer[10];
+
 void esp_init();
 
 void send_char(char c);
