@@ -24,6 +24,7 @@ void SysTick_Handler() {
 	if(!(global_time_ms % MPU_INTERRUPT_PERIOD_MS)) mpu_flag = true;
 	if(!(global_time_ms % BATTERY_STATUS_PERIOD_MS)) battery_flag = true;
 	if(!(global_time_ms % ROBOT_SINGLE_TURN_PERIOD_MS) && turn_mode_flag) turn_flag = true;
+	if(!(global_time_ms % WIFI_ORDER_READ_PERIOD_MS)) execute_flag = true;
 }
 
 void init_reference_values() {
@@ -47,7 +48,7 @@ void init_flags() {
 	execute_flag = false;
 	turn_flag = false;
 	busy_turning_flag = false;
-	turn_mode_flag = true;
+	turn_mode_flag = false;
 }
 
 void set_tables() {
@@ -99,9 +100,18 @@ void hardware_setup() {
 }
 
 void get_order() {
-	if(!execute_flag) return;
+	if(!(execute_flag && USART_GetFlagStatus(USART3, USART_FLAG_RXNE))) return;
 
-	//TODO
+	char order = USART_ReceiveData(USART3);
+
+	if(order == 'n') {
+		turn_mode_flag = true;
+	}
+	else if(order == 'f') {
+		turn_mode_flag = false;
+		busy_turning_flag = false;
+		turn_flag = false;
+	}
 
 	execute_flag = false;
 }

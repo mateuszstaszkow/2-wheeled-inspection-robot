@@ -28,9 +28,9 @@ volatile bool velocity_flag;
 volatile bool uart_flag;
 volatile bool mpu_flag;
 volatile bool battery_flag;
+volatile bool execute_flag;
 
 volatile bool start_flag;
-volatile bool execute_flag;
 volatile bool turn_flag;
 volatile bool busy_turning_flag;
 volatile bool turn_mode_flag;
