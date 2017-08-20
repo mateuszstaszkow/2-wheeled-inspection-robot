@@ -49,12 +49,12 @@
  */
 void MPU6050_Initialize()
 {
+	MPU6050_set_DLPF_mode(6);
+	MPU6050_set_DHPF_mode(1);
     MPU6050_SetClockSource(MPU6050_CLOCK_PLL_XGYRO);
     MPU6050_SetFullScaleGyroRange(MPU6050_GYRO_FS_250);
     MPU6050_SetFullScaleAccelRange(MPU6050_ACCEL_FS_2);
     MPU6050_SetSleepModeStatus(DISABLE);
-	MPU6050_set_DLPF_mode(6);
-	MPU6050_set_DHPF_mode(1);
 }
 
 /** Verify the I2C connection.
