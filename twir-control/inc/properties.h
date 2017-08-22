@@ -114,6 +114,7 @@
 
 #define PI 									3.141593
 #define MPU_CONSTANT 						180
+#define HCSR_CONSTANT						0.017
 
 
 // Interrupt constants

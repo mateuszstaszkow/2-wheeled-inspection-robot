@@ -25,7 +25,6 @@ void SysTick_Handler() {
 	if(!(global_time_ms % BATTERY_STATUS_PERIOD_MS)) battery_flag = true;
 	if(!(global_time_ms % ROBOT_SINGLE_TURN_PERIOD_MS) && turn_mode_flag) turn_flag = true;
 	if(!(global_time_ms % WIFI_ORDER_READ_PERIOD_MS)) execute_flag = true;
-	if(!(global_time_ms % 200)) hcsr_flag = true;
 }
 
 void init_reference_values() {
@@ -51,6 +50,7 @@ void init_flags() {
 	turn_flag = false;
 	busy_turning_flag = false;
 	turn_mode_flag = false;
+	sector_captured_flag = false;
 }
 
 void set_tables() {
@@ -95,7 +95,6 @@ void timer_us_init() {
 	RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM3, ENABLE);
 
 	TIM_TimeBaseInitTypeDef tim;
-	NVIC_InitTypeDef nvic;
 
 	TIM_TimeBaseStructInit(&tim);
 	tim.TIM_CounterMode = TIM_CounterMode_Up;
@@ -104,7 +103,6 @@ void timer_us_init() {
 	TIM_TimeBaseInit(TIM3, &tim);
 
 	TIM_ITConfig(TIM3, TIM_IT_Update, ENABLE);
-	TIM_Cmd(TIM3, ENABLE);
 }
 
 void hardware_setup() {
@@ -126,11 +124,14 @@ void get_order() {
 
 	if(order == 'n') {
 		turn_mode_flag = true;
+		hcsr_flag = true;
 	}
 	else if(order == 'f') {
 		turn_mode_flag = false;
 		busy_turning_flag = false;
 		turn_flag = false;
+		hcsr_flag = false;
+		sector_captured_flag = false;
 	}
 
 	execute_flag = false;
@@ -150,6 +151,7 @@ void rotate_robot() {
 	if(busy_turning_flag && ((global_time_ms - current_time) > SCAN_ROTATION_TIME)) {
 		busy_turning_flag = false;
 		turn_flag = false;
+		hcsr_flag = true;
 		return;
 	} else if(busy_turning_flag) {
 		return;
@@ -162,13 +164,17 @@ void rotate_robot() {
 void correct_robot_position() {
 	if(!start_flag) return;
 	
-	if((!turn_flag || is_balanced()) && !busy_turning_flag) {
+	if(sector_captured_flag && ((turn_flag && is_balanced()) || busy_turning_flag)) {
+		rotate_robot();
+	} else {
 		filtered_balancing_data = simple_complementary_filter();
 		calculate_pid_output(calculate_angle_from_speed(robot_linear_velocity_ref), filtered_balancing_data);
 		motor_driver(robot_turn_speed_ref);
-		//if(is_balanced()) hcsr_get_distance();
-	} else {
-		rotate_robot();
+		if(hcsr_flag && is_balanced()) {
+			hcsr_get_distance();
+			hcsr_flag = false;
+			sector_captured_flag = true;
+		}
 	}
 
 	start_flag = false;
@@ -186,7 +192,7 @@ void stabilize() {
 
 void export_data_wifi() {
 	printf("%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d;\r\n",
-			(int)filtered_angle,
+			(int)filtered_angle / MPU_CONSTANT,
 			(int)measuredData.fy,
 		    (int)measuredData.fz,
 			(int)measuredData.dist_m,
@@ -222,10 +228,6 @@ void start() {
 		update_linear_postion();
 		update_battery_state();
 		stabilize();
-		if(hcsr_flag) {
-			hcsr_get_distance();
-			hcsr_flag = false;
-		}
 		update_esp_values();
 	}
 }

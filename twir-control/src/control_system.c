@@ -50,7 +50,7 @@ int simple_complementary_filter() {
 }
 
 bool is_balanced() {
-	return ((abs(filtered_balancing_data) > BALANCED_PID_ERROR) ||
-			(abs(filtered_angle) > BALANCED_ANGLE) ||
-			(abs(measuredData.pos_dif) > BALANCED_SPEED));
+	return ((abs(filtered_balancing_data) < BALANCED_PID_ERROR) &&
+			(abs(filtered_angle) < BALANCED_ANGLE) &&
+			(abs(measuredData.pos_dif) < BALANCED_SPEED));
 }

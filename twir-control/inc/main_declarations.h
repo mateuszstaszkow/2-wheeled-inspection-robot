@@ -38,6 +38,7 @@ volatile bool start_flag;
 volatile bool turn_flag;
 volatile bool busy_turning_flag;
 volatile bool turn_mode_flag;
+volatile bool sector_captured_flag;
 
 // Main timer interrupt handler
 void SysTick_Handler();

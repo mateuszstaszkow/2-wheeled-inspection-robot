@@ -16,6 +16,7 @@ void EXTI4_IRQHandler() {
 			TIM_SetCounter(TIM3, 0);
 		} else if(GPIO_ReadInputDataBit(HCSR04_RIGHT_ECHO_Port, HCSR04_RIGHT_ECHO_Pin) == 0) {
 			measuredData.dist_r = TIM_GetCounter(TIM3);
+			TIM_Cmd(TIM3, DISABLE);
 		}
 
 		EXTI_ClearITPendingBit(HCSR04_RIGHT_ECHO_Interrupt_Line);
@@ -25,6 +26,7 @@ void EXTI4_IRQHandler() {
 			TIM_SetCounter(TIM3, 0);
 		} else if(GPIO_ReadInputDataBit(HCSR04_MIDDLE_ECHO_Port, HCSR04_MIDDLE_ECHO_Pin) == 0) {
 			measuredData.dist_m = TIM_GetCounter(TIM3);
+			TIM_Cmd(TIM3, DISABLE);
 		}
 
 		EXTI_ClearITPendingBit(HCSR04_MIDDLE_ECHO_Interrupt_Line);
@@ -45,6 +47,7 @@ void EXTI9_5_IRQHandler() {
 			TIM_SetCounter(TIM3, 0);
 		} else if(GPIO_ReadInputDataBit(HCSR04_LEFT_ECHO_Port, HCSR04_LEFT_ECHO_Pin) == 0) {
 			measuredData.dist_l = TIM_GetCounter(TIM3);
+			TIM_Cmd(TIM3, DISABLE);
 		}
 		EXTI_ClearITPendingBit(HCSR04_LEFT_ECHO_Interrupt_Line);
 	}

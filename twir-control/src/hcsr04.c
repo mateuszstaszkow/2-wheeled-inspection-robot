@@ -106,7 +106,6 @@ void hcsr_timer_init() {
 	TIM_TimeBaseInit(TIM2, &tim);
 
 	TIM_ITConfig(TIM2, TIM_IT_Update, ENABLE);
-	TIM_Cmd(TIM2, ENABLE);
 
 	nvic.NVIC_IRQChannel = TIM2_IRQn;
 	nvic.NVIC_IRQChannelPreemptionPriority = 0;
@@ -142,6 +141,7 @@ void hcsr_get_distance() {
 	hcsr_get_dist_middle();
 	//hcsr_get_dist_left();
 
+	TIM_Cmd(TIM3, ENABLE);
 	TIM_SetCounter(TIM2, 0);
 	TIM_Cmd(TIM2, ENABLE);
 }
