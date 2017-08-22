@@ -93,12 +93,36 @@ void hcsr_init_left() {
 	NVIC_Init(&nvic);
 }
 
+void hcsr_timer_init() {
+	RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM2, ENABLE);
+
+	TIM_TimeBaseInitTypeDef tim;
+	NVIC_InitTypeDef nvic;
+
+	TIM_TimeBaseStructInit(&tim);
+	tim.TIM_CounterMode = TIM_CounterMode_Up;
+	tim.TIM_Prescaler = 64 - 1;
+	tim.TIM_Period = 10 - 1;
+	TIM_TimeBaseInit(TIM2, &tim);
+
+	TIM_ITConfig(TIM2, TIM_IT_Update, ENABLE);
+	TIM_Cmd(TIM2, ENABLE);
+
+	nvic.NVIC_IRQChannel = TIM2_IRQn;
+	nvic.NVIC_IRQChannelPreemptionPriority = 0;
+	nvic.NVIC_IRQChannelSubPriority = 0;
+	nvic.NVIC_IRQChannelCmd = ENABLE;
+	NVIC_Init(&nvic);
+}
+
 void hcsr_init() {
 	RCC_APB2PeriphClockCmd(RCC_APB2Periph_AFIO, ENABLE);
 
 	//hcsr_init_right();
 	hcsr_init_middle();
 	//hcsr_init_left();
+
+	hcsr_timer_init();
 }
 
 void hcsr_get_dist_right() {

@@ -1,5 +1,15 @@
 #include "interrupt_handler.h"
 
+void TIM2_IRQHandler()
+{
+    if (TIM_GetITStatus(TIM2, TIM_IT_Update) == SET)
+    {
+        TIM_ClearITPendingBit(TIM2, TIM_IT_Update);
+        turn_off_triggers();
+        TIM_Cmd(TIM2, DISABLE);
+    }
+}
+
 void EXTI4_IRQHandler() {
 	if(EXTI_GetITStatus(HCSR04_RIGHT_ECHO_Interrupt_Line)) {
 		if(GPIO_ReadInputDataBit(HCSR04_RIGHT_ECHO_Port, HCSR04_RIGHT_ECHO_Pin) == 1) {

@@ -22,8 +22,6 @@ int16_t robot_linear_velocity_ref;
 int16_t robot_velocity_ref;
 uint8_t robot_direction_ref;
 volatile uint32_t global_time_ms;
-volatile long global_time_us;
-volatile uint8_t hcsr_trig_time_us;
 struct MeasuredData measuredData;
 struct DataPID motor_driver_pid;
 
@@ -33,7 +31,6 @@ volatile bool uart_flag;
 volatile bool mpu_flag;
 volatile bool battery_flag;
 volatile bool execute_flag;
-volatile bool hcsr_trig_flag;
 volatile bool hcsr_flag;
 
 // Other flags
@@ -41,9 +38,6 @@ volatile bool start_flag;
 volatile bool turn_flag;
 volatile bool busy_turning_flag;
 volatile bool turn_mode_flag;
-volatile bool busy_scanning_flag;
-
-volatile bool test_flag;
 
 // Main timer interrupt handler
 void SysTick_Handler();
@@ -57,8 +51,6 @@ void set_tables();
 void init_pid_structure(struct DataPID *data_pid, const float kP, const float kI, const float kD, const int saturation);
 // Main file's global variables initialization
 void global_variables_init();
-//
-void TIM2_IRQHandler();
 // Timer interrupt configuration for global timer, frequency set by SYS_TICK_INTERRUPT_FREQUENCY_HZ
 void global_timer_init();
 // Secondary precise timer initialization (1 us precise)

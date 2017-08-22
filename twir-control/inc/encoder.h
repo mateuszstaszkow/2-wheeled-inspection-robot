@@ -2,6 +2,17 @@
 #define PROPERTIES_H_
 
 #include "properties.h"
+#include "stdbool.h"
+
+// Interrupt flags
+volatile bool l_cnt_flag_forward;
+volatile bool l_cnt_flag_backward;
+volatile bool r_cnt_flag_forward;
+volatile bool r_cnt_flag_backward;
+
+// Global variables
+volatile int l_encoder_counter;
+volatile int r_encoder_counter;
 
 // 
 void left_encoder_init();
