@@ -25,6 +25,7 @@ void SysTick_Handler() {
 	if(!(global_time_ms % BATTERY_STATUS_PERIOD_MS)) battery_flag = true;
 	if(!(global_time_ms % ROBOT_SINGLE_TURN_PERIOD_MS) && turn_mode_flag) turn_flag = true;
 	if(!(global_time_ms % WIFI_ORDER_READ_PERIOD_MS)) execute_flag = true;
+	if(!(global_time_ms % 200)) hcsr_flag = true;
 }
 
 void init_reference_values() {
@@ -43,12 +44,17 @@ void init_flags() {
 	r_cnt_flag_backward = false;
 	mpu_flag = false;
 	battery_flag = false;
+	hcsr_trig_flag = false;
+	hcsr_flag = false;
 
 	start_flag = false;
 	execute_flag = false;
 	turn_flag = false;
 	busy_turning_flag = false;
 	turn_mode_flag = false;
+	busy_scanning_flag = false;
+
+	test_flag = false;
 }
 
 void set_tables() {
@@ -74,6 +80,8 @@ void init_pid_structure(struct DataPID *data_pid, const float kP, const float kI
 }
 
 void global_variables_init() {
+	hcsr_trig_time_us = 0;
+
 	init_reference_values();
 
 	init_flags();
@@ -89,14 +97,58 @@ void global_timer_init() {
 	SysTick_Config(SystemCoreClock / SYS_TICK_INTERRUPT_FREQUENCY_HZ);
 }
 
+void TIM2_IRQHandler()
+{
+    if (TIM_GetITStatus(TIM2, TIM_IT_Update) == SET)
+    {
+        TIM_ClearITPendingBit(TIM2, TIM_IT_Update);
+        turn_off_triggers();
+        TIM_Cmd(TIM2, DISABLE);
+    }
+}
+
+void timer_us_init() {
+	RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM2 | RCC_APB1Periph_TIM3, ENABLE);
+
+	TIM_TimeBaseInitTypeDef tim;
+	NVIC_InitTypeDef nvic;
+
+	TIM_TimeBaseStructInit(&tim);
+	tim.TIM_CounterMode = TIM_CounterMode_Up;
+	tim.TIM_Prescaler = 64 - 1;
+	tim.TIM_Period = 10 - 1;
+	TIM_TimeBaseInit(TIM2, &tim);
+
+	TIM_ITConfig(TIM2, TIM_IT_Update, ENABLE);
+	TIM_Cmd(TIM2, ENABLE);
+
+	nvic.NVIC_IRQChannel = TIM2_IRQn;
+	nvic.NVIC_IRQChannelPreemptionPriority = 0;
+	nvic.NVIC_IRQChannelSubPriority = 0;
+	nvic.NVIC_IRQChannelCmd = ENABLE;
+	NVIC_Init(&nvic);
+
+
+	TIM_TimeBaseStructInit(&tim);
+	tim.TIM_CounterMode = TIM_CounterMode_Up;
+	tim.TIM_Prescaler = 64 - 1;
+	tim.TIM_Period = 10000 - 1;
+	TIM_TimeBaseInit(TIM3, &tim);
+
+	TIM_ITConfig(TIM3, TIM_IT_Update, ENABLE);
+	TIM_Cmd(TIM3, ENABLE);
+}
+
 void hardware_setup() {
 	encoder_init();
 	motor_driver_init();
 	esp_init();
+	hcsr_init();
 	MPU6050_I2C_Init();
 	MPU6050_Initialize();
 	global_variables_init();
 	global_timer_init();
+	timer_us_init();
 }
 
 void get_order() {
@@ -130,6 +182,7 @@ void rotate_robot() {
 	if(busy_turning_flag && ((global_time_ms - current_time) > SCAN_ROTATION_TIME)) {
 		busy_turning_flag = false;
 		turn_flag = false;
+		busy_scanning_flag = false;
 		return;
 	} else if(busy_turning_flag) {
 		return;
@@ -146,6 +199,7 @@ void correct_robot_position() {
 		filtered_balancing_data = simple_complementary_filter();
 		calculate_pid_output(calculate_angle_from_speed(robot_linear_velocity_ref), filtered_balancing_data);
 		motor_driver(robot_turn_speed_ref);
+		//if(is_balanced()) hcsr_get_distance();
 	} else {
 		rotate_robot();
 	}
@@ -168,15 +222,16 @@ void export_data_wifi() {
 			(int)filtered_angle,
 			(int)measuredData.fy,
 		    (int)measuredData.fz,
-			(int)filtered_acc,
+			(int)measuredData.dist_m,
 			(int)measuredData.ay,
 			(int)measuredData.az,
-			(int)measuredData.pos_l%360,
-			(int)measuredData.pos_r%360,
+			(int)measuredData.pos_l % 360,
+			(int)measuredData.pos_r % 360,
 			(int)measuredData.xl,
 			(int)measuredData.vl,
 			(int)measuredData.dir,
 			(int)measuredData.pid,
+			(int)(turn_mode_flag ? 1 : 0),
 			(int)filtered_balancing_data,
 			(int)measuredData.pos_dif,
 			(int)measuredData.pid_position,
@@ -200,6 +255,10 @@ void start() {
 		update_linear_postion();
 		update_battery_state();
 		stabilize();
+		if(hcsr_flag) {
+			hcsr_get_distance();
+			hcsr_flag = false;
+		}
 		update_esp_values();
 	}
 }

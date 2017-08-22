@@ -26,6 +26,9 @@ struct MeasuredData {
 	int pid_motor;
 	int pid_position;
 	int battery_state;
+	uint16_t dist_l;
+	uint16_t dist_m;
+	uint32_t dist_r;
 };
 
 // Calculated constants
