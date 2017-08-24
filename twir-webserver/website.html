@@ -3,65 +3,73 @@
   <title>Dwukołowy robot inspekcyjny</title>
   <meta charset="UTF-8">
   <style>
-    body {
-      background-color: #000; 
-      font-family: Calibri; 
-      color: #fff; 
-      text-align: center; 
-    }
-    .footer {
-      position: fixed; 
-      right: 0; 
-      bottom: 0; 
-      left: 0; 
-      padding: 1rem; 
-      background-color: #111; 
-      text-align: center; 
-    }
+	.content-container {
+	  width: 800px; 
+	  float: left;
+	}
+	
     .minor-header {
       border-bottom: 3px solid black; 
       font-size: 1.5em; 
       font-weight: bold; 
     }
+	
     .reg-header {
       margin-top: 3px;  
       font-size: 1.1em; 
       font-weight: bold; 
     }
+	
+	.header-info {
+	  font-weight: 100;
+	}
+	
     .measurement-left-block {
       width: 49.75%; 
       float: left; 
       border-right: 2px solid black; 
     }
+	
     .measurement-right-block {
       width: 49.75%; 
       float: left; 
       border-left: 2px solid black; 
     }
+	
     .reg-left-block {
       width: 33%; 
       float: left; 
       border-right: 2px solid black; 
     }
+	
     .reg-mid-block {
       width: 33%; 
       float: left; 
       border-right: 2px solid black; 
       border-left: 2px solid black; 
     }
+	
     .reg-right-block {
       width: 33%; 
       float: left; 
       border-left: 2px solid black; 
     }
+	
     .measurement-container {
       clear: both; 
       margin-bottom: 15px; 
       background-color: DimGray; 
     }
+	
     .measurement-container:hover {
       background-color: gray; 
     }
+	
+	.measurement-footer {
+	  border-top: 3px solid black; 
+	  clear: both;
+	}
+	
     .scan-button {
       background-color: green; 
       border: none; 
@@ -73,10 +81,55 @@
       font-size: 25px; 
       cursor: pointer; 
     }
+	
+	.scan-left-block {
+	  width: 79%; 
+	  float: left;
+	}
+	
+	.scan-right-block {
+	  width: 21%; 
+	  background-color: black; 
+	  float: left; 
+	  text-align: right;
+	}
+	
+	.footer {
+      position: fixed; 
+      right: 0; 
+      bottom: 0; 
+      left: 0; 
+      padding: 1rem; 
+      background-color: #111; 
+      text-align: center; 
+    }
+	
+	.plots-container {
+	  width: 600px; 
+	  height: 664px; 
+	  float: left; 
+	  margin-left: 50px; 
+	  margin-top: 80px;
+	}
+	
+	.plot-panel {
+	  width: 100%; 
+	  height: 214px; 
+	  margin-bottom: 10px;
+	}
+	
+	body {
+      background-color: #000; 
+      font-family: Calibri; 
+      color: #fff; 
+      text-align: center; 
+    }
+	
     p {
       margin-top: 5px; 
       margin-bottom: 5px; 
     }
+	
     button {
       margin-top: 2px; 
       margin-bottom: 3px;
@@ -96,17 +149,25 @@
   var xmlHttpOff=createXmlHttpObject();
   var powerOn = false;
   var busy = false;
+  
+  function setButtonStop() {
+	document.getElementById("battery-switch").innerHTML = "STOP";
+    document.getElementById("battery-switch").style.background = "Red";
+    document.getElementById("battery-switch").style.color = "White";
+  }
+  
+  function setButtonScan() {
+	document.getElementById("battery-switch").innerHTML = "SKANUJ";
+	document.getElementById("battery-switch").style.background = "Green";
+	document.getElementById("battery-switch").style.color = "White";
+  }
 
   function setPowerButton() {
     if(powerOn && !busy) {
-      document.getElementById("battery-switch").innerHTML = "STOP";
-      document.getElementById("battery-switch").style.background = "Red";
-      document.getElementById("battery-switch").style.color = "White";
+      setButtonStop();
     }
     else if(!powerOn && !busy) {
-      document.getElementById("battery-switch").innerHTML = "SKANUJ";
-      document.getElementById("battery-switch").style.background = "Green";
-      document.getElementById("battery-switch").style.color = "White";
+      setButtonScan();
     }
   }
 
@@ -165,9 +226,7 @@
   function handleSwitchOn(){
     if(xmlHttpOn.readyState==4 && xmlHttpOn.status==200){
       powerOn = true;
-      document.getElementById("battery-switch").innerHTML = "STOP";
-      document.getElementById("battery-switch").style.background = "Red";
-      document.getElementById("battery-switch").style.color = "White";
+      setButtonStop();
       busy = false;
     }
   }
@@ -175,9 +234,7 @@
   function handleSwitchOff(){
     if(xmlHttpOff.readyState==4 && xmlHttpOff.status==200){
       powerOn = false;
-      document.getElementById("battery-switch").innerHTML = "SKANUJ";
-      document.getElementById("battery-switch").style.background = "Green";
-      document.getElementById("battery-switch").style.color = "White";
+      setButtonScan();
       busy = false;
     }
   }
@@ -298,6 +355,7 @@
     var ax = document.getElementById("ax").innerHTML;
     var error = document.getElementById("errbalance").innerHTML;
     var pid = document.getElementById("pid").innerHTML;
+	
     var angle = {
      x: timeTable,
      y: [fx],
@@ -322,11 +380,13 @@
      name: 'Wyjście',
      type: "scatter"
     };
+	
     var layout = {
       title: 'Wykres wejścia i wyjścia - regulator kąta wychylenia',
       xaxis: {title: 'Czas', showline: true, mirror: 'allticks', ticks: 'inside'},
       margin: {l: 40, b: 35, t: 35}
     };
+	
     var data = [angle, angularAcceleration, controlInput, controlOutput];
     Plotly.plot(plot, data, layout);
   }
@@ -336,6 +396,7 @@
     var ax = document.getElementById("ax").innerHTML;
     var error = document.getElementById("errpos").innerHTML;
     var pid = document.getElementById("pidpos").innerHTML;
+	
     var angularAcceleration = {
      x: timeTable,
      y: [ax],
@@ -354,11 +415,13 @@
      name: 'Wyjście',
      type: "scatter"
     };
+	
     var layout = {
       title: 'Wykres wejścia i wyjścia - regulator prędkości liniowej',
       xaxis: {title: 'Czas', showline: true, mirror: 'allticks', ticks: 'inside'},
       margin: {l: 40, b: 35, t: 35}
     };
+	
     var data = [angularAcceleration, controlInput, controlOutput];
     Plotly.plot(plot, data, layout);
   }
@@ -369,6 +432,7 @@
     var xr = document.getElementById("xr").innerHTML;
     var error = document.getElementById("errmotor").innerHTML;
     var pid = document.getElementById("pidmotor").innerHTML;
+	
     var leftPosition = {
      x: timeTable,
      y: [xl],
@@ -393,11 +457,13 @@
      name: 'Wyjście',
      type: "scatter"
     };
+	
     var layout = {
       title: 'Wykres wejścia i wyjścia - regulator silników',
       xaxis: {title: 'Czas', showline: true, mirror: 'allticks', ticks: 'inside'},
       margin: {l: 40, b: 35, t: 35}
     };
+	
     var data = [leftPosition, rightPosition, controlInput, controlOutput];
     Plotly.plot(plot, data, layout);
   }
@@ -415,8 +481,10 @@
     var ax = document.getElementById("ax").innerHTML;
     var error = document.getElementById("errbalance").innerHTML;
     var pid = document.getElementById("pid").innerHTML;
+	
     var dataY = [[fx], [ax], [error], [pid]];
     var dataX = [timeTable, timeTable, timeTable, timeTable];
+	
     var extendedPlot = {
      x: dataX,
      y: dataY
@@ -429,8 +497,10 @@
     var ax = document.getElementById("ax").innerHTML;
     var error = document.getElementById("errpos").innerHTML;
     var pid = document.getElementById("pidpos").innerHTML;
+	
     var dataY = [[ax], [error], [pid]];
     var dataX = [timeTable, timeTable, timeTable];
+	
     var extendedPlot = {
      x: dataX,
      y: dataY
@@ -443,9 +513,11 @@
     var xl = document.getElementById("xl").innerHTML;
     var xr = document.getElementById("xr").innerHTML;
     var error = document.getElementById("errmotor").innerHTML;
-    pid = document.getElementById("pidmotor").innerHTML;
+    var pid = document.getElementById("pidmotor").innerHTML;
+	
     var dataY = [[xl], [xr], [error], [pid]];
     var dataX = [timeTable, timeTable, timeTable, timeTable];
+	
     var extendedPlot = {
      x: dataX,
      y: dataY
@@ -462,7 +534,7 @@
   }
 </script>
 <body onload='start()'>
-  <div style="width: 800px; float: left">
+  <div class='content-container'>
     <h1>DWUKOŁOWY ROBOT INSPEKCYJNY</h1>
   
     <div class='measurement-container' style="height: 109px;">
@@ -481,7 +553,7 @@
     </div>
   
     <div class='measurement-container' style="height: 61px;">
-      <div style='width: 79%; float: left;'>
+      <div class='scan-left-block'>
         <div class='minor-header'>Skanowanie pomieszczeń:</div>
         <div class='measurement-left-block' style='width: 49.685%;'>
           <p>Odległość od przeszkody: <A id='mdist'></A> cm</p>
@@ -490,7 +562,7 @@
           <button>WYŚWIETL MAPĘ</button>
         </div>
       </div>
-      <div style='width: 21%; background-color: black; float: left; text-align: right;'>
+      <div class='scan-right-block'>
         <div id="battery-switch" onclick="powerSwitch()" class='scan-button'>
           SKANUJ
         </div>
@@ -526,13 +598,13 @@
         <p>Wejście: <A id='errmotor'></A></p>
         <p>Wyjście: <A id='pidmotor'></A></p>
       </div>
-      <div style='border-top: 3px solid black; clear: both;'>
-        <button style='margin-top: 2px;'>WYŚWIETL WYKRESY</button>
+      <div class='measurement-footer'>
+        <button>WYŚWIETL WYKRESY</button>
       </div>
     </div>
   
     <div class='measurement-container' style="height: 109px;">
-      <div class='minor-header'>Pozycja liniowa: <span style='font-weight: 100;'>(aktualny kierunek: <A id='dir'></A>)</span> </div>
+      <div class='minor-header'>Pozycja liniowa: <span class='header-info'>(aktualny kierunek: <A id='dir'></A>)</span> </div>
       <div class='measurement-left-block'>
         <p>Kąt lewego koła: <A id='lpos'></A> stopni</p>
         <p>Droga lewego koła: <A id='xl'></A> cm</p>
@@ -558,10 +630,10 @@
     </div>
   </div>
   
-  <div id="plotcontainer" style="width:600px; height:664px; float: left; margin-left: 50px; margin-top: 80px;">
-    <div id="balanceplot" style="width: 100%; height: 214px; margin-bottom: 10px;"></div>
-    <div id="linearplot" style="width: 100%; height: 214px; margin-bottom: 10px;"></div>
-    <div id="motorplot" style="width: 100%; height: 214px; margin-bottom: 10px;"></div>
+  <div id="plotcontainer" class='plots-container'>
+    <div id="balanceplot" class='plot-panel'></div>
+    <div id="linearplot" class='plot-panel'></div>
+    <div id="motorplot" class='plot-panel'></div>
 	<!--<div id=\"pid-container\" style=\"background-color:DimGray; text-align:center; width:600px; height:170px; float:left;\">
 	  <div class='minor-header'>Wartości regulatora PID: </div><br>
 	  <div style=\"width:300px; height:100px; margin: 0 auto; text-align:center;\">
