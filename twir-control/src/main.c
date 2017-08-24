@@ -191,7 +191,7 @@ void stabilize() {
 }
 
 void export_data_wifi() {
-	printf("%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d;\r\n",
+	printf("%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,;\r\n",
 			(int)filtered_angle / MPU_CONSTANT,
 			(int)measuredData.fy,
 		    (int)measuredData.fz,
@@ -209,6 +209,8 @@ void export_data_wifi() {
 			(int)filtered_balancing_data,
 			(int)measuredData.pos_dif,
 			(int)measuredData.pid_position,
+			(int)measuredData.motor_dif;
+			(int)measuredData.pid_motor;
 			(int)measuredData.xr,
 			(int)measuredData.vr,
 			(int)measuredData.battery_state

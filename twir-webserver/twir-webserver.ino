@@ -1,6 +1,12 @@
 #include <ESP8266WiFi.h>
 #include <ESP8266WebServer.h>
 
+#define USART_BUFFER_SIZE 100
+#define MAX_CONNECTION_TRY_COUNT 20
+#define MOBILE_IP_ADDRESS 90
+
+const char webSite[] PROGMEM = {"<!DOCTYPE HTML> <head> <title>Dwukołowy robot inspekcyjny</title> <meta charset=\"UTF-8\"> <style>.content-container{width: 800px; float: left;}.minor-header{border-bottom: 3px solid black; font-size: 1.5em; font-weight: bold;}.reg-header{margin-top: 3px; font-size: 1.1em; font-weight: bold;}.header-info{font-weight: 100;}.measurement-left-block{width: 49.75%; float: left; border-right: 2px solid black;}.measurement-right-block{width: 49.75%; float: left; border-left: 2px solid black;}.reg-left-block{width: 33%; float: left; border-right: 2px solid black;}.reg-mid-block{width: 33%; float: left; border-right: 2px solid black; border-left: 2px solid black;}.reg-right-block{width: 33%; float: left; border-left: 2px solid black;}.measurement-container{clear: both; margin-bottom: 15px; background-color: DimGray;}.measurement-container:hover{background-color: gray;}.measurement-footer{border-top: 3px solid black; clear: both;}.scan-button{background-color: green; border: none; color: white; padding: 15px 40px; text-align: center; text-decoration: none; display: inline-block; font-size: 25px; cursor: pointer;}.scan-left-block{width: 79%; float: left;}.scan-right-block{width: 21%; background-color: black; float: left; text-align: right;}.footer{position: fixed; right: 0; bottom: 0; left: 0; padding: 1rem; background-color: #111; text-align: center;}.plots-container{width: 600px; height: 664px; float: left; margin-left: 50px; margin-top: 80px;}.plot-panel{width: 100%; height: 214px; margin-bottom: 10px;}body{background-color: #000; font-family: Calibri; color: #fff; text-align: center;}p{margin-top: 5px; margin-bottom: 5px;}button{margin-top: 2px; margin-bottom: 3px; font-size: 11px; font-weight: bold; padding: 4px; padding-left: 15px; padding-right: 15px; cursor: pointer;}</style> <script src=\"https://cdn.plot.ly/plotly-latest.min.js\"></script></head><script>var xmlHttp=createXmlHttpObject(); var xmlHttpOn=createXmlHttpObject(); var xmlHttpOff=createXmlHttpObject(); var powerOn=false; var busy=false; function setButtonStop(){document.getElementById(\"battery-switch\").innerHTML=\"STOP\"; document.getElementById(\"battery-switch\").style.background=\"Red\"; document.getElementById(\"battery-switch\").style.color=\"White\";}function setButtonScan(){document.getElementById(\"battery-switch\").innerHTML=\"SKANUJ\";document.getElementById(\"battery-switch\").style.background=\"Green\";document.getElementById(\"battery-switch\").style.color=\"White\";}function setPowerButton(){if(powerOn && !busy){setButtonStop();}else if(!powerOn && !busy){setButtonScan();}}function powerSwitch(){if(!powerOn && !busy){busy=true; document.getElementById(\"battery-switch\").style.background=\"DarkOliveGreen\"; document.getElementById(\"battery-switch\").style.color=\"Gray\"; xmlHttpOn.open('PUT','/on',true); xmlHttpOn.onreadystatechange=handleSwitchOn; xmlHttpOn.send(null);}else if(powerOn && !busy){busy=true; document.getElementById(\"battery-switch\").style.background=\"Brown\"; document.getElementById(\"battery-switch\").style.color=\"Gray\"; xmlHttpOff.open('PUT','/off',true); xmlHttpOff.onreadystatechange=handleSwitchOff; xmlHttpOff.send(null);}}function getPID(regulatorPart, pidValue){xmlHttpOff.open('PUT','/pid?part=' + regulatorPart + '&value=' + pidValue.value.toString(), true); xmlHttpOff.send(null);}function createXmlHttpObject(){if(window.XMLHttpRequest){xmlHttp=new XMLHttpRequest();}else{xmlHttp=new ActiveXObject('Microsoft.XMLHTTP');}return xmlHttp;}function get_firstchild(n){var x=n.firstChild; while (x.nodeType !=1){x=x.nextSibling;}return x;}function process(){setPowerButton(); plotMeasurements(); if(xmlHttp.readyState==0 || xmlHttp.readyState==4){xmlHttp.open('PUT','xml',true); xmlHttp.onreadystatechange=handleServerResponse; xmlHttp.send(null);}setTimeout('process()',200);}function handleSwitchOn(){if(xmlHttpOn.readyState==4 && xmlHttpOn.status==200){powerOn=true; setButtonStop(); busy=false;}}function handleSwitchOff(){if(xmlHttpOff.readyState==4 && xmlHttpOff.status==200){powerOn=false; setButtonScan(); busy=false;}}function handleServerResponse(){if(xmlHttp.readyState==4 && xmlHttp.status==200){xmlResponse=xmlHttp.responseXML; xmldoc=xmlResponse.getElementsByTagName('response-time'); message=xmldoc[0].firstChild.nodeValue; document.getElementById('runtime').innerHTML=message; xmldoc=xmlResponse.getElementsByTagName('response-fx'); message=xmldoc[0].firstChild.nodeValue; document.getElementById('fx').innerHTML=message; xmldoc=xmlResponse.getElementsByTagName('response-fy'); message=xmldoc[0].firstChild.nodeValue; document.getElementById('fy').innerHTML=message; xmldoc=xmlResponse.getElementsByTagName('response-fz'); message=xmldoc[0].firstChild.nodeValue; document.getElementById('fz').innerHTML=message; xmldoc=xmlResponse.getElementsByTagName('response-ax'); message=xmldoc[0].firstChild.nodeValue; document.getElementById('ax').innerHTML=message; xmldoc=xmlResponse.getElementsByTagName('response-ay'); message=xmldoc[0].firstChild.nodeValue; document.getElementById('ay').innerHTML=message; xmldoc=xmlResponse.getElementsByTagName('response-az'); message=xmldoc[0].firstChild.nodeValue; document.getElementById('az').innerHTML=message; xmldoc=xmlResponse.getElementsByTagName('response-lpos'); message=xmldoc[0].firstChild.nodeValue; document.getElementById('lpos').innerHTML=message; xmldoc=xmlResponse.getElementsByTagName('response-rpos'); message=xmldoc[0].firstChild.nodeValue; document.getElementById('rpos').innerHTML=message; xmldoc=xmlResponse.getElementsByTagName('response-xl'); message=xmldoc[0].firstChild.nodeValue; document.getElementById('xl').innerHTML=message; xmldoc=xmlResponse.getElementsByTagName('response-vl'); message=xmldoc[0].firstChild.nodeValue; document.getElementById('vl').innerHTML=message; xmldoc=xmlResponse.getElementsByTagName('response-nap'); message=xmldoc[0].firstChild.nodeValue; document.getElementById('nap').innerHTML=message; xmldoc=xmlResponse.getElementsByTagName('response-dir'); message=xmldoc[0].firstChild.nodeValue; document.getElementById('dir').innerHTML=message; xmldoc=xmlResponse.getElementsByTagName('response-pid'); message=xmldoc[0].firstChild.nodeValue; document.getElementById('pid').innerHTML=message; xmldoc=xmlResponse.getElementsByTagName('response-turn'); message=xmldoc[0].firstChild.nodeValue.replace(/\s+/g, ''); if(message==='1') powerOn=true; else if(message==='0') powerOn=false; xmldoc=xmlResponse.getElementsByTagName('response-dist-m'); message=xmldoc[0].firstChild.nodeValue; document.getElementById('mdist').innerHTML=message; xmldoc=xmlResponse.getElementsByTagName('response-balance-error'); message=xmldoc[0].firstChild.nodeValue; document.getElementById('errbalance').innerHTML=message; xmldoc=xmlResponse.getElementsByTagName('response-pos-error'); message=xmldoc[0].firstChild.nodeValue; document.getElementById('errpos').innerHTML=message; xmldoc=xmlResponse.getElementsByTagName('response-pos-pid'); message=xmldoc[0].firstChild.nodeValue; document.getElementById('pidpos').innerHTML=message; xmldoc=xmlResponse.getElementsByTagName('response-motor-error'); message=xmldoc[0].firstChild.nodeValue; document.getElementById('errmotor').innerHTML=message; xmldoc=xmlResponse.getElementsByTagName('response-motor-pid'); message=xmldoc[0].firstChild.nodeValue; document.getElementById('pidmotor').innerHTML=message; xmldoc=xmlResponse.getElementsByTagName('response-xr'); message=xmldoc[0].firstChild.nodeValue; document.getElementById('xr').innerHTML=message; xmldoc=xmlResponse.getElementsByTagName('response-vr'); message=xmldoc[0].firstChild.nodeValue; document.getElementById('vr').innerHTML=message; /*xmldoc=xmlResponse.getElementsByTagName('response-battery'); message=xmldoc[0].firstChild.nodeValue; document.getElementById('battery').innerHTML=message;*/ xmldoc=xmlResponse.getElementsByTagName('rssi'); message=xmldoc[0].firstChild.nodeValue; document.getElementById('rssi').innerHTML=message;}}var timeUnit=0; var timeTable=[timeUnit]; function createBalancePlotMeasurements(){var plot=document.getElementById(\"balanceplot\"); var fx=document.getElementById(\"fx\").innerHTML; var ax=document.getElementById(\"ax\").innerHTML; var error=document.getElementById(\"errbalance\").innerHTML; var pid=document.getElementById(\"pid\").innerHTML; var angle={x: timeTable, y: [fx], name: 'fx', type: \"scatter\"}; var angularAcceleration={x: timeTable, y: [ax], name: 'ax', type: \"scatter\"}; var controlInput={x: timeTable, y: [error], name: 'Uchyb', type: \"scatter\"}; var controlOutput={x: timeTable, y: [pid], name: 'Wyjście', type: \"scatter\"}; var layout={title: 'Wykres wejścia i wyjścia - regulator kąta wychylenia', xaxis:{title: 'Czas', showline: true, mirror: 'allticks', ticks: 'inside'}, margin:{l: 40, b: 35, t: 35}}; var data=[angle, angularAcceleration, controlInput, controlOutput]; Plotly.plot(plot, data, layout);}function createLinearPlotMeasurements(){var plot=document.getElementById(\"linearplot\"); var ax=document.getElementById(\"ax\").innerHTML; var error=document.getElementById(\"errpos\").innerHTML; var pid=document.getElementById(\"pidpos\").innerHTML; var angularAcceleration={x: timeTable, y: [ax], name: 'ax', type: \"scatter\"}; var controlInput={x: timeTable, y: [error], name: 'Uchyb', type: \"scatter\"}; var controlOutput={x: timeTable, y: [pid], name: 'Wyjście', type: \"scatter\"}; var layout={title: 'Wykres wejścia i wyjścia - regulator prędkości liniowej', xaxis:{title: 'Czas', showline: true, mirror: 'allticks', ticks: 'inside'}, margin:{l: 40, b: 35, t: 35}}; var data=[angularAcceleration, controlInput, controlOutput]; Plotly.plot(plot, data, layout);}function createMotorPlotMeasurements(){var plot=document.getElementById(\"motorplot\"); var xl=document.getElementById(\"xl\").innerHTML; var xr=document.getElementById(\"xr\").innerHTML; var error=document.getElementById(\"errmotor\").innerHTML; var pid=document.getElementById(\"pidmotor\").innerHTML; var leftPosition={x: timeTable, y: [xl], name: 'left pos', type: \"scatter\"}; var rightPosition={x: timeTable, y: [xr], name: 'right pos', type: \"scatter\"}; var controlInput={x: timeTable, y: [error], name: 'Uchyb', type: \"scatter\"}; var controlOutput={x: timeTable, y: [pid], name: 'Wyjście', type: \"scatter\"}; var layout={title: 'Wykres wejścia i wyjścia - regulator silników', xaxis:{title: 'Czas', showline: true, mirror: 'allticks', ticks: 'inside'}, margin:{l: 40, b: 35, t: 35}}; var data=[leftPosition, rightPosition, controlInput, controlOutput]; Plotly.plot(plot, data, layout);}function start(){createBalancePlotMeasurements(); createLinearPlotMeasurements(); createMotorPlotMeasurements(); process();}function plotBalanceMeasurements(){var plot=document.getElementById(\"balanceplot\"); var fx=document.getElementById(\"fx\").innerHTML; var ax=document.getElementById(\"ax\").innerHTML; var error=document.getElementById(\"errbalance\").innerHTML; var pid=document.getElementById(\"pid\").innerHTML; var dataY=[[fx], [ax], [error], [pid]]; var dataX=[timeTable, timeTable, timeTable, timeTable]; var extendedPlot={x: dataX, y: dataY}; Plotly.extendTraces(plot, extendedPlot, [0, 1, 2, 3]);}function plotLinearMeasurements(){var plot=document.getElementById(\"linearplot\"); var ax=document.getElementById(\"ax\").innerHTML; var error=document.getElementById(\"errpos\").innerHTML; var pid=document.getElementById(\"pidpos\").innerHTML; var dataY=[[ax], [error], [pid]]; var dataX=[timeTable, timeTable, timeTable]; var extendedPlot={x: dataX, y: dataY}; Plotly.extendTraces(plot, extendedPlot, [0, 1, 2]);}function plotMotorMeasurements(){var plot=document.getElementById(\"motorplot\"); var xl=document.getElementById(\"xl\").innerHTML; var xr=document.getElementById(\"xr\").innerHTML; var error=document.getElementById(\"errmotor\").innerHTML; var pid=document.getElementById(\"pidmotor\").innerHTML; var dataY=[[xl], [xr], [error], [pid]]; var dataX=[timeTable, timeTable, timeTable, timeTable]; var extendedPlot={x: dataX, y: dataY}; Plotly.extendTraces(plot, extendedPlot, [0, 1, 2, 3]);}function plotMeasurements(){timeUnit +=0.2; timeTable=[timeUnit]; plotBalanceMeasurements(); plotLinearMeasurements(); plotMotorMeasurements();}</script><body onload='start()'> <div class='content-container'> <h1>DWUKOŁOWY ROBOT INSPEKCYJNY</h1> <div class='measurement-container' style=\"height: 109px;\"> <div class='measurement-left-block'> <div class='minor-header'>Pozycja kątowa:</div><p>FX: <A id='fx'></A></p><p>FY: <A id='fy'></A></p><p>FZ: <A id='fz'></A></p></div><div class='measurement-right-block'> <div class='minor-header'>Przyspieszenie kątowe:</div><p>AX: <A id='ax'></A> 1/s2</p><p>AY: <A id='ay'></A> 1/s2</p><p>AZ: <A id='az'></A> 1/s2</p></div></div><div class='measurement-container' style=\"height: 61px;\"> <div class='scan-left-block'> <div class='minor-header'>Skanowanie pomieszczeń:</div><div class='measurement-left-block' style='width: 49.685%;'> <p>Odległość od przeszkody: <A id='mdist'></A> cm</p></div><div class='measurement-right-block' style='width: 49.685%;'> <button>WYŚWIETL MAPĘ</button> </div></div><div class='scan-right-block'> <div id=\"battery-switch\" onclick=\"powerSwitch()\" class='scan-button'> SKANUJ </div></div></div><div class='measurement-container' style=\"height: 238px;\"> <div class='minor-header'>Teoria sterowania</div><div class='reg-left-block'> <div class='reg-header'>Balansowanie:</div><p>Wartość P: 0.019</p><p>Wartość I: 0.011</p><p>Wartość D: 0.000</p><p>Nasycenie: 1000</p><p>Wejście: <A id='errbalance'></A></p><p>Wyjście: <A id='pid'></A></p></div><div class='reg-mid-block'> <div class='reg-header'>Położenie liniowe:</div><p>Wartość P: 12.000</p><p>Wartość I: 0.000</p><p>Wartość D: 0.000</p><p>Nasycenie: 5000</p><p>Wejście: <A id='errpos'></A></p><p>Wyjście: <A id='pidpos'></A></p></div><div class='reg-right-block'> <div class='reg-header'>Sterownik silników:</div><p>Wartość P: 0.800</p><p>Wartość I: 0.000</p><p>Wartość D: 0.000</p><p>Nasycenie: 1000</p><p>Wejście: <A id='errmotor'></A></p><p>Wyjście: <A id='pidmotor'></A></p></div><div class='measurement-footer'> <button>WYŚWIETL WYKRESY</button> </div></div><div class='measurement-container' style=\"height: 109px;\"> <div class='minor-header'>Pozycja liniowa: <span class='header-info'>(aktualny kierunek: <A id='dir'></A>)</span> </div><div class='measurement-left-block'> <p>Kąt lewego koła: <A id='lpos'></A> stopni</p><p>Droga lewego koła: <A id='xl'></A> cm</p><p>Prędkość liniowa wg lewego koła: <A id='vl'></A> km/h</p></div><div class='measurement-right-block'> <p>Kąt prawego koła: <A id='rpos'></A> stopni</p><p>Droga prawego koła: <A id='xr'></A> cm</p><p>Prędkość liniowa wg prawego koła: <A id='vr'></A> km/h</p></div></div><div class='measurement-container' style=\"height: 85px;\"> <div class='minor-header'>Pozostałe informacje:</div><div class='measurement-left-block'> <p>Napięcie ESP8266: <A id='nap'></A> V</p><p>Czas działania: <A id='runtime'></A></p></div><div class='measurement-right-block'> <p>Siła sygnału WiFi: <A id='rssi'></A> dBm</p><div style='height: 29px;'></div></div></div></div><div id=\"plotcontainer\" class='plots-container'> <div id=\"balanceplot\" class='plot-panel'></div><div id=\"linearplot\" class='plot-panel'></div><div id=\"motorplot\" class='plot-panel'></div><!--<div id=\"pid-container\" style=\"background-color:DimGray; text-align:center; width:600px; height:170px; float:left;\"> <div class='minor-header'>Wartości regulatora PID: </div><br><div style=\"width:300px; height:100px; margin: 0 auto; text-align:center;\"> <div style=\"float:left; padding:3px;\"> P: <input type=\"text\" onkeyup=\"getPID('p',this)\" id=\"p\" size=\"5\" value=\"7\"></div><div style=\"float:left; padding:3px;\"> I: <input type=\"text\" onkeyup=\"getPID('i',this)\" id=\"i\" size=\"5\" value=\"0.05\"></div><div style=\"float:left; padding:3px;\"> D: <input type=\"text\" onkeyup=\"getPID('d',this)\" id=\"d\" size=\"5\" value=\"0.5\"></div></div></div>--> </div><div class='footer'> Mateusz Staszków - Praca inżynierska \"Dwukołowy robot inspekcyjny\", Politechnika Warszawska 2017 </div></BODY></HTML>"};
+
 typedef struct MeasuredData {
   int fx;
   int fy;
@@ -10,25 +16,31 @@ typedef struct MeasuredData {
   int az;
   int l_pos;
   int r_pos;
-  int x;
-  float v;
+  int xl;
+  int xr;
+  float vl;
+  float vr;
   int dir;
   int pid;
+  int turn;
+  int dist_m;
+  int balance_error;
+  int pos_error;
+  int pos_pid;
+  int motor_error;
+  int motor_pid;
   int battery_state;
 };
 
 ESP8266WebServer server(80);
 const char* ssid = "UPC1171078";
 const char* password = "FMYEJWUS";
-//const char* ssid="FunBox2-3C76";
-//const char* password="6DFC195A7195577F427D44FDEC";
 const char* ssidTel = "internet";
 const char* passwordTel = "haslohaslo";
 
-String webSite, javaScript, XML;
+String XML;
 MeasuredData measuredData;
-char buffer_uart[100];
-int powerPin = 2; // GPIO2 of ESP8266
+char buffer_uart[USART_BUFFER_SIZE];
 
 void parseData(MeasuredData &m, char* buffer) {
   int n=0;
@@ -64,10 +76,10 @@ void parseData(MeasuredData &m, char* buffer) {
           m.r_pos = atoi(number);
           break;
         case 8:
-          m.x = atoi(number);
+          m.xl = atoi(number);
           break;
         case 9:
-          m.v = atoi(number)*0.036;
+          m.vl = atoi(number)*0.036;
           break;
         case 10:
           m.dir = atoi(number);
@@ -76,6 +88,33 @@ void parseData(MeasuredData &m, char* buffer) {
           m.pid = atoi(number);
           break;
         case 12:
+          m.turn = atoi(number);
+          break;
+        case 13:
+          m.dist_m = atoi(number);
+          break;
+        case 14:
+          m.balance_error = atoi(number);
+          break;
+        case 15:
+          m.pos_error = atoi(number);
+          break;
+        case 16:
+          m.pos_pid = atoi(number);
+          break;
+        case 17:
+          m.motor_error = atoi(number);
+          break;
+        case 18:
+          m.motor_pid = atoi(number);
+          break;
+        case 19:
+          m.xr = atoi(number);
+          break;
+        case 20:
+          m.vr = atoi(number)*0.036;
+          break;
+        case 21:
           m.battery_state = atoi(number);
           break;
       }
@@ -85,308 +124,35 @@ void parseData(MeasuredData &m, char* buffer) {
   }
 }
 
-void read_uart() {
-//  measuredData.fx = 0;
-//  measuredData.fy = 0;
-//  measuredData.fz = 0;
-//  measuredData.ax = 0;
-//  measuredData.ay = 0;
-//  measuredData.az = 0;
-//  measuredData.l_pos = 0;
-//  measuredData.r_pos = 0;
-//  measuredData.x = 0;  
-//  measuredData.v = 0;
-//  measuredData.dir = 1;
-  
-  int ii;
-  for(ii=0;ii<100;ii++) {
-    buffer_uart[ii]=';';
+void read_uart() {  
+  int i;
+  for(i = 0; i < USART_BUFFER_SIZE; i++) {
+    buffer_uart[i]=';';
   }
     
-  char tmp;
-  Serial.readBytesUntil(';',buffer_uart,100);
-  
+  Serial.readBytesUntil(';', buffer_uart, USART_BUFFER_SIZE);
   parseData(measuredData, buffer_uart);
 }
 
-void buildWebsite(){
-  buildJavascript();
-  webSite="<!DOCTYPE HTML>\n";
-  webSite+=" <head>\n";
-  webSite+="  <title>Dwukołowy robot inspekcyjny</title>\n";
-  webSite+="  <meta charset=\"utf-8\">\n";
-  webSite+="  <style>\n";
-  webSite+="    body { background-color: #000; font-family: Calibri; Color: #fff; text-align: center; }\n";
-  webSite+="  </style>\n";
-  webSite+="  <script src=\"https://cdn.plot.ly/plotly-latest.min.js\"></script>\n";
-  webSite+="</head>\n";
-  webSite+=javaScript;
-  webSite+="<BODY onload='createPlotMeasurements()'>\n";
-  webSite+="  <div style=\"width: 800px; float: left\">\n";
-  webSite+="    <h1>Dwukołowy robot inspekcyjny</h1>\n";
-  webSite+="    <div style=\"background-color: gray\">\n";
-  webSite+="      <h2>Pozycja kątowa:</h2>\n";
-  webSite+="      <p>X: <A id='fx'></A>,</p>\n";
-  webSite+="      <p>Y: <A id='fy'></A>,</p>\n";
-  webSite+="      <p>Z: <A id='fz'></A>,</p>\n";
-  webSite+="    </div>\n";
-  webSite+="    <div style=\"background-color: DimGray\">\n";
-  webSite+="      <h2>Przyspieszenie kątowe poszczególnych osi:</h2>\n";
-  webSite+="      <p>X: <A id='ax'></A> 1/s2,</p>\n";
-  webSite+="      <p>Y: <A id='ay'></A> 1/s2,</p>\n";
-  webSite+="      <p>Z: <A id='az'></A> 1/s2,</p>\n";
-  webSite+="    </div>\n";
-  webSite+="    <div style=\"background-color: gray\">\n";
-  webSite+="      <h2>Pozycja liniowa: </h2>\n";
-  webSite+="      <p>Położenie lewego koła: <A id='lpos'></A>,</p>\n";
-  webSite+="      <p>Położenie prawego koła: <A id='rpos'></A>,</p>\n";
-  webSite+="      <p>Przesunięcie robota: <A id='x'></A> cm,</p>\n";
-  webSite+="      <p>Prędkość liniowa robota: <A id='v'></A> km/h,</p>\n";
-  webSite+="      <p>Aktualny kierunek poruszania się robota: <A id='dir'></A>,</p>\n";
-  webSite+="      <p>Wyjście sterowania: <A id='pid'></A>,</p>\n";
-  webSite+="    </div>\n";
-  webSite+="    <div style=\"background-color: DimGray\">\n";
-  webSite+="      <h2>Pozostałe informacje:</h2>\n";
-  webSite+="      <p>Napięcie ESP8266: <A id='nap'></A> V</p>\n";
-  webSite+="      <p>Czas działania: <A id='runtime'></A></p>\n";
-  webSite+="      <p>Stan baterii: <A id='battery'></A> %</p>\n";
-  webSite+="      <p>Siła sygnału WiFi: <A id='rssi'></A> dBm</p>\n";
-  webSite+="    </div>\n";
-  webSite+="  </div>\n";
-  webSite+="  <div id=\"plotcontainer\" style=\"width:600px; height:800px; float: left; padding: 60px;\">\n";
-  webSite+="    <h2>Wykres wejścia sterowania do wyjścia: </h2>\n";
-  webSite+="    <div id=\"pidplot\" style=\"width:600px; height:400px;\"></div>\n";
-  webSite+="    <div id=\"battery-switch-container\" style=\"width:600px; height:132px;\">\n";
-  webSite+="      <div id=\"battery-switch\" onclick=\"powerSwitch()\" style=\"background-color: green; border: none; color: white; padding: 30px 50px; text-align: center; text-decoration: none; display: inline-block; font-size: 25px; margin: 20px 2px; cursor: pointer;\">\n";
-  webSite+="        START\n";
-  webSite+="      </div>\n";
-  webSite+="    </div>\n";
-  webSite+="    <div id=\"pid-container\" style=\"background-color:DimGray; text-align:center; width:600px; height:170px; float:left;\">\n";
-  webSite+="      <h2>Wartości regulatora PID: </h2><br>\n";
-  webSite+="      <div style=\"width:300px; height:100px; margin: 0 auto; text-align:center;\">\n";
-  webSite+="        <div style=\"float:left; padding:3px;\"> P: <input type=\"text\" onkeyup=\"getPID('p',this)\" id=\"p\" size=\"5\" value=\"7\"></div>\n";
-  webSite+="        <div style=\"float:left; padding:3px;\"> I: <input type=\"text\" onkeyup=\"getPID('i',this)\" id=\"i\" size=\"5\" value=\"0.05\"></div>\n";
-  webSite+="        <div style=\"float:left; padding:3px;\"> D: <input type=\"text\" onkeyup=\"getPID('d',this)\" id=\"d\" size=\"5\" value=\"0.5\"></div>\n";
-  webSite+="      </div>\n";
-  webSite+="    </div>\n";
-  webSite+="  </div>\n";
-  webSite+="</BODY>\n";
-  webSite+="</HTML>\n";
-}
-
-void buildJavascript(){
-  javaScript="<SCRIPT>\n";
-  javaScript+="var xmlHttp=createXmlHttpObject();\n";
-  javaScript+="var xmlHttpOn=createXmlHttpObject();\n";
-  javaScript+="var xmlHttpOff=createXmlHttpObject();\n";
-  javaScript+="var powerOn = false;\n";
-  javaScript+="var busy = false;\n";
-
-  javaScript+="function powerSwitch() {\n";
-  javaScript+="  if(!powerOn && !busy) {\n";
-  javaScript+="    busy = true;\n";
-  javaScript+="    document.getElementById(\"battery-switch\").style.background = \"DarkOliveGreen\"\n";
-  javaScript+="    document.getElementById(\"battery-switch\").style.color = \"Gray\"\n";
-  javaScript+="    xmlHttpOn.open('PUT','/on',true);\n";
-  javaScript+="    xmlHttpOn.onreadystatechange=handleSwitchOn;\n";
-  javaScript+="    xmlHttpOn.send(null);\n";
-  javaScript+="  }\n";
-  javaScript+="  else if(powerOn && !busy) {\n";
-  javaScript+="    busy = true;\n";
-  javaScript+="    document.getElementById(\"battery-switch\").style.background = \"Brown\"\n";
-  javaScript+="    document.getElementById(\"battery-switch\").style.color = \"Gray\"\n";
-  javaScript+="    xmlHttpOff.open('PUT','/off',true);\n";
-  javaScript+="    xmlHttpOff.onreadystatechange=handleSwitchOff;\n";
-  javaScript+="    xmlHttpOff.send(null);\n";
-  javaScript+="  }\n";
-  javaScript+="}\n";
-
-  javaScript+="function getPID(regulatorPart, pidValue) {\n";
-//  javaScript+=" var message = "";\n";
-//  javaScript+=" switch(regulatorPart) {\n";
-//  javaScript+="   case 'p':\n";
-//  javaScript+="     message += (\"p\" + pidValue);\n";
-//  javaScript+="     break;\n";
-//  javaScript+="   case 'i':\n";
-//  javaScript+="     message += (\"i\" + pidValue);\n";
-//  javaScript+="     break;\n";
-//  javaScript+="   case 'd':\n";
-//  javaScript+="     message += (\"d\" + pidValue);\n";
-//  javaScript+="     break;\n";
-//  javaScript+=" }\n";
-  javaScript+=" xmlHttpOff.open('PUT','/pid?part=' + regulatorPart + '&value=' + pidValue.value.toString(), true);\n";
-  javaScript+=" xmlHttpOff.send(null);\n";
-  javaScript+="}\n";
-
-  javaScript+="function createXmlHttpObject(){\n";
-  javaScript+=" if(window.XMLHttpRequest){\n";
-  javaScript+="    xmlHttp=new XMLHttpRequest();\n";
-  javaScript+=" }else{\n";
-  javaScript+="    xmlHttp=new ActiveXObject('Microsoft.XMLHTTP');\n";
-  javaScript+=" }\n";
-  javaScript+=" return xmlHttp;\n";
-  javaScript+="}\n";
-
-  javaScript+="function get_firstchild(n) {\n";
-  javaScript+="  var x = n.firstChild;\n";
-  javaScript+="  while (x.nodeType != 1) {\n";
-  javaScript+="      x = x.nextSibling;\n";
-  javaScript+="  }\n";
-  javaScript+="  return x;\n";
-  javaScript+="}\n";
-
-  javaScript+="function process(){\n";
-  javaScript+=" plotMeasurements();\n";
-  javaScript+=" if(xmlHttp.readyState==0 || xmlHttp.readyState==4){\n";
-  javaScript+="   xmlHttp.open('PUT','xml',true);\n";
-  javaScript+="   xmlHttp.onreadystatechange=handleServerResponse;\n";
-  javaScript+="   xmlHttp.send(null);\n";
-  javaScript+=" }\n";
-  javaScript+=" setTimeout('process()',200);\n";
-  javaScript+="}\n";
-
-  javaScript+="function handleSwitchOn(){\n";
-  javaScript+="  if(xmlHttpOn.readyState==4 && xmlHttpOn.status==200){\n";
-  javaScript+="    powerOn = true;\n";
-  javaScript+="    document.getElementById(\"battery-switch\").innerHTML = \"STOP\";\n";
-  javaScript+="    document.getElementById(\"battery-switch\").style.background = \"Red\"\n";
-  javaScript+="    document.getElementById(\"battery-switch\").style.color = \"White\"\n";
-  javaScript+="    busy = false;\n";
-  javaScript+="  }\n";
-  javaScript+="}\n";
-
-  javaScript+="function handleSwitchOff(){\n";
-  javaScript+="  if(xmlHttpOff.readyState==4 && xmlHttpOff.status==200){\n";
-  javaScript+="    powerOn = false;\n";
-  javaScript+="    document.getElementById(\"battery-switch\").innerHTML = \"START\";\n";
-  javaScript+="    document.getElementById(\"battery-switch\").style.background = \"Green\"\n";
-  javaScript+="    document.getElementById(\"battery-switch\").style.color = \"White\"\n";
-  javaScript+="    busy = false;\n";
-  javaScript+="  }\n";
-  javaScript+="}\n";
-  
-  javaScript+="function handleServerResponse(){\n";
-  javaScript+=" if(xmlHttp.readyState==4 && xmlHttp.status==200){\n";
-  javaScript+="   xmlResponse=xmlHttp.responseXML;\n";
-  
-  javaScript+="   xmldoc = xmlResponse.getElementsByTagName('response-time');\n";
-  javaScript+="   message = xmldoc[0].firstChild.nodeValue;\n";
-  javaScript+="   document.getElementById('runtime').innerHTML=message;\n";
-
-  javaScript+="   xmldoc = xmlResponse.getElementsByTagName('response-fx');\n";
-  javaScript+="   message = xmldoc[0].firstChild.nodeValue;\n";
-  javaScript+="   document.getElementById('fx').innerHTML=message;\n";
-
-  javaScript+="   xmldoc = xmlResponse.getElementsByTagName('response-fy');\n";
-  javaScript+="   message = xmldoc[0].firstChild.nodeValue;\n";
-  javaScript+="   document.getElementById('fy').innerHTML=message;\n";
-
-  javaScript+="   xmldoc = xmlResponse.getElementsByTagName('response-fz');\n";
-  javaScript+="   message = xmldoc[0].firstChild.nodeValue;\n";
-  javaScript+="   document.getElementById('fz').innerHTML=message;\n";
-
-  javaScript+="   xmldoc = xmlResponse.getElementsByTagName('response-ax');\n";
-  javaScript+="   message = xmldoc[0].firstChild.nodeValue;\n";
-  javaScript+="   document.getElementById('ax').innerHTML=message;\n";
-
-  javaScript+="   xmldoc = xmlResponse.getElementsByTagName('response-ay');\n";
-  javaScript+="   message = xmldoc[0].firstChild.nodeValue;\n";
-  javaScript+="   document.getElementById('ay').innerHTML=message;\n";
-
-  javaScript+="   xmldoc = xmlResponse.getElementsByTagName('response-az');\n";
-  javaScript+="   message = xmldoc[0].firstChild.nodeValue;\n";
-  javaScript+="   document.getElementById('az').innerHTML=message;\n";
-
-  javaScript+="   xmldoc = xmlResponse.getElementsByTagName('response-lpos');\n";
-  javaScript+="   message = xmldoc[0].firstChild.nodeValue;\n";
-  javaScript+="   document.getElementById('lpos').innerHTML=message;\n";
-
-  javaScript+="   xmldoc = xmlResponse.getElementsByTagName('response-rpos');\n";
-  javaScript+="   message = xmldoc[0].firstChild.nodeValue;\n";
-  javaScript+="   document.getElementById('rpos').innerHTML=message;\n";
-
-  javaScript+="   xmldoc = xmlResponse.getElementsByTagName('response-x');\n";
-  javaScript+="   message = xmldoc[0].firstChild.nodeValue;\n";
-  javaScript+="   document.getElementById('x').innerHTML=message;\n";
-
-  javaScript+="   xmldoc = xmlResponse.getElementsByTagName('response-v');\n";
-  javaScript+="   message = xmldoc[0].firstChild.nodeValue;\n";
-  javaScript+="   document.getElementById('v').innerHTML=message;\n";
-
-  javaScript+="   xmldoc = xmlResponse.getElementsByTagName('response-nap');\n";
-  javaScript+="   message = xmldoc[0].firstChild.nodeValue;\n";
-  javaScript+="   document.getElementById('nap').innerHTML=message;\n";
-
-  javaScript+="   xmldoc = xmlResponse.getElementsByTagName('response-dir');\n";
-  javaScript+="   message = xmldoc[0].firstChild.nodeValue;\n";
-  javaScript+="   document.getElementById('dir').innerHTML=message;\n";
-
-  javaScript+="   xmldoc = xmlResponse.getElementsByTagName('response-pid');\n";
-  javaScript+="   message = xmldoc[0].firstChild.nodeValue;\n";
-  javaScript+="   document.getElementById('pid').innerHTML=message;\n";
-
-  javaScript+="   xmldoc = xmlResponse.getElementsByTagName('response-battery');\n";
-  javaScript+="   message = xmldoc[0].firstChild.nodeValue;\n";
-  javaScript+="   document.getElementById('battery').innerHTML=message;\n";
-
-  javaScript+="   xmldoc = xmlResponse.getElementsByTagName('rssi');\n";
-  javaScript+="   message = xmldoc[0].firstChild.nodeValue;\n";
-  javaScript+="   document.getElementById('rssi').innerHTML=message;\n";
-  
-  javaScript+=" }\n";
-  javaScript+="}\n";
-  javaScript+="  var timeUnit = 0;\n";
-
-  javaScript+="function createPlotMeasurements(){\n";
-  javaScript+="  plot = document.getElementById(\"pidplot\");\n";
-  javaScript+="  fx = document.getElementById(\"fx\").innerHTML;\n";
-  javaScript+="  ax = document.getElementById(\"ax\").innerHTML;\n";
-  javaScript+="  pid = document.getElementById(\"pid\").innerHTML;\n";
-  javaScript+="  timeUnit += 0.2;\n";
-  javaScript+="  var angle = {\n";
-  javaScript+="  x: [timeUnit],\n";
-  javaScript+="  y: [fx],\n";
-  javaScript+="  name: 'Wejscie',\n";
-  javaScript+="  type: \"scatter\"\n";
-  javaScript+="  };\n";
-  javaScript+="  var angularAcceleration = {\n";
-  javaScript+="  x: [timeUnit],\n";
-  javaScript+="  y: [ax],\n";
-  javaScript+="  name: 'ax',\n";
-  javaScript+="  type: \"scatter\"\n";
-  javaScript+="  };\n";
-  javaScript+="  var controlOutput = {\n";
-  javaScript+="  x: [timeUnit],\n";
-  javaScript+="  y: [pid],\n";
-  javaScript+="  name: 'Wyjscie',\n";
-  javaScript+="  type: \"scatter\"\n";
-  javaScript+="  };\n";
-  javaScript+="  var data = [angle, controlOutput, angularAcceleration];\n";
-  javaScript+="  Plotly.plot(plot, data);\n";
-  javaScript+="\n";
-  javaScript+="  process();\n";
-  javaScript+="}\n";
-  
-  javaScript+="function plotMeasurements(){\n";
-  javaScript+="  plot = document.getElementById(\"pidplot\");\n";
-  javaScript+="  fx = document.getElementById(\"fx\").innerHTML;\n";
-  javaScript+="  ax = document.getElementById(\"ax\").innerHTML;\n";
-  javaScript+="  pid = document.getElementById(\"pid\").innerHTML;\n";
-  javaScript+="  timeUnit += 0.2;\n";
-  javaScript+="  var dataY = [[fx], [pid], [ax]];\n";
-  javaScript+="  var dataX = [[timeUnit], [timeUnit], [timeUnit]];\n";
-  javaScript+="  var extendedPlot = {\n";
-  javaScript+="  x: dataX,\n";
-  javaScript+="  y: dataY,\n";
-  javaScript+="  };\n";
-  javaScript+="  Plotly.extendTraces(plot, extendedPlot, [0, 1, 2]);\n";
-  javaScript+="}\n";
-  
-  javaScript+="</SCRIPT>\n";
+String millis2time(){
+  String Time="";
+  unsigned long ss;
+  byte mm,hh;
+  ss=millis()/1000;
+  hh=ss/3600;
+  mm=(ss-hh*3600)/60;
+  ss=(ss-hh*3600)-mm*60;
+  if(hh<10)Time+="0";
+  Time+=(String)hh+":";
+  if(mm<10)Time+="0";
+  Time+=(String)mm+":";
+  if(ss<10)Time+="0";
+  Time+=(String)ss;
+  return Time;
 }
 
 void buildXML(){  
-  String move_direction;
+  String move_direction = "";
   if(measuredData.dir == 1) move_direction = "przód";
   else if(measuredData.dir == 0) move_direction = "tył";
 
@@ -396,7 +162,7 @@ void buildXML(){
   long rssi = WiFi.RSSI();
   
   XML ="<?xml version='1.0'?>";
-  XML+="  <Donnees>"; 
+  XML+="  <Data>"; 
   XML+="    <response-time>";
   XML+=       millis2time();
   XML+="    </response-time>";
@@ -424,12 +190,12 @@ void buildXML(){
   XML+="    <response-rpos>";
   XML+=       (String)measuredData.r_pos;
   XML+="    </response-rpos>";
-  XML+="    <response-x>";
-  XML+=       (String)measuredData.x;
-  XML+="    </response-x>";
-  XML+="    <response-v>";
-  XML+=       (String)measuredData.v;
-  XML+="    </response-v>";
+  XML+="    <response-xl>";
+  XML+=       (String)measuredData.xl;
+  XML+="    </response-xl>";
+  XML+="    <response-vl>";
+  XML+=       (String)measuredData.vl;
+  XML+="    </response-vl>";
   XML+="    <response-pid>";
   XML+=       (String)measuredData.pid;
   XML+="    </response-pid>";
@@ -439,35 +205,44 @@ void buildXML(){
   XML+="    <response-dir>";
   XML+=       move_direction;
   XML+="    </response-dir>";
+  XML+="    <response-turn>";
+  XML+=       (String)measuredData.turn;
+  XML+="    </response-turn>";
+  XML+="    <response-dist-m>";
+  XML+=       (String)measuredData.dist_m;
+  XML+="    </response-dist-m>";
+  XML+="    <response-balance-error>";
+  XML+=       (String)measuredData.balance_error;
+  XML+="    </response-balance-error>";
+  XML+="    <response-pos-error>";
+  XML+=       (String)measuredData.pos_error;
+  XML+="    </response-pos-error>";
+  XML+="    <response-pos-pid>";
+  XML+=       (String)measuredData.pos_pid;
+  XML+="    </response-pos-pid>";
+  XML+="    <response-motor-error>";
+  XML+=       (String)measuredData.motor_error;
+  XML+="    </response-motor-error>";
+  XML+="    <response-motor-pid>";
+  XML+=       (String)measuredData.motor_pid;
+  XML+="    </response-motor-pid>";
+  XML+="    <response-xr>";
+  XML+=       (String)measuredData.xr;
+  XML+="    </response-xr>";
+  XML+="    <response-vr>";
+  XML+=       (String)measuredData.vr;
+  XML+="    </response-vr>";
   XML+="    <response-battery>";
   XML+=       (String)measuredData.battery_state;
   XML+="    </response-battery>";
   XML+="    <rssi>";
   XML+=       (String)rssi;
   XML+="    </rssi>";
-  XML+="  </Donnees>"; 
-}
-
-String millis2time(){
-  String Time="";
-  unsigned long ss;
-  byte mm,hh;
-  ss=millis()/1000;
-  hh=ss/3600;
-  mm=(ss-hh*3600)/60;
-  ss=(ss-hh*3600)-mm*60;
-  if(hh<10)Time+="0";
-  Time+=(String)hh+":";
-  if(mm<10)Time+="0";
-  Time+=(String)mm+":";
-  if(ss<10)Time+="0";
-  Time+=(String)ss;
-  return Time;
+  XML+="  </Data>"; 
 }
 
 void handleWebsite(){
-  buildWebsite();
-  server.send(200,"text/html",webSite);
+  server.send_P(200,"text/html",webSite);
 }
 
 void handleXML(){
@@ -476,13 +251,11 @@ void handleXML(){
 }
 
 void handleOn() {
-  digitalWrite(powerPin, HIGH);
   Serial.println("n;");
   server.send(200,"text/xml","<battery>on</battery>");
 }
 
 void handleOff() {
-  digitalWrite(powerPin, LOW);
   Serial.println("f;");
   server.send(200,"text/xml","<battery>off</battery>");
 }
@@ -508,36 +281,47 @@ void serialPrintWithArg(char* preCharTab, const char* postCharTab) {
   Serial.println(result);
 }
 
-void setup() {
-  pinMode(powerPin, OUTPUT);
-  digitalWrite(powerPin, LOW);
-  
-  Serial.begin(115200);  
-  IPAddress ip(192, 168, 43, 90);
+void configureMobileNetwork() {
+  IPAddress ip(192, 168, 43, MOBILE_IP_ADDRESS);
   IPAddress gateway(192, 168, 43, 1);
   IPAddress subnet(255, 255, 255, 0);
   WiFi.config(ip, gateway, subnet);
+}
 
-  int tryCount;
-  Serial.println("\n\nBOOTING ESP8266 ...");
-
-  serialPrintWithArg("Trying to connect to SSID: ", ssid);
-  WiFi.begin(ssid, password);
-  for(tryCount = 0; tryCount < 1000; tryCount++) {
-    if(WiFi.status() != WL_CONNECTED) delay(500);
+void connectToNetwork() {
+  int tryCount = 0;
+  while((WiFi.status() != WL_CONNECTED) && (tryCount != MAX_CONNECTION_TRY_COUNT)) {
+    delay(500);
+    tryCount++;
   }
-  if(tryCount == 1000) {
+}
+
+void connectToHomeHotSpot() {
+  if(WiFi.status() != WL_CONNECTED) {
     WiFi.disconnect();
+    serialPrintWithArg("Trying to connect to SSID: ", ssid);
+    WiFi.begin(ssid, password);
+    connectToNetwork();
+  }
+  if(WiFi.status() != WL_CONNECTED) {
     serialPrintWithArg("Could not connect to SSID: ", ssid);
+  }
+}
+
+void connectToMobileHotSpot() {
+  if(WiFi.status() != WL_CONNECTED) {
+    WiFi.disconnect();
+    configureMobileNetwork();
     serialPrintWithArg("Trying to connect to SSID: ", ssidTel);
     WiFi.begin(ssidTel, passwordTel);
-    for(tryCount = 0; tryCount < 1000; tryCount++) {
-      if(WiFi.status() != WL_CONNECTED) delay(500);
-    }
+    connectToNetwork();
   }
-  if(tryCount == 1000) serialPrintWithArg("Could not connect to SSID: ", ssidTel);
+  if(WiFi.status() != WL_CONNECTED) {
+    serialPrintWithArg("Could not connect to SSID: ", ssidTel);
+  }
+}
 
-  while(WiFi.status() != WL_CONNECTED) delay(500);
+void configureBackend() {
   WiFi.mode(WIFI_STA);
   Serial.print("Connected to SSID: ");
   Serial.println(WiFi.SSID());
@@ -549,6 +333,18 @@ void setup() {
   server.on("/on",handleOn);
   server.on("/off",handleOff);
   server.on("/pid",handlePID);
+}
+
+void setup() {  
+  Serial.println("\n\nBOOTING ESP8266 ...");
+  Serial.begin(115200);  
+
+  while(WiFi.status() != WL_CONNECTED) {
+    connectToHomeHotSpot();
+    connectToMobileHotSpot();
+  }
+
+  configureBackend();
   server.begin();  
 }
 
