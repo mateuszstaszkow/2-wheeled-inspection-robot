@@ -2,8 +2,9 @@
 #include <ESP8266WebServer.h>
 
 #define USART_BUFFER_SIZE 100
+#define MAX_CONNECTION_TRY_COUNT 20
+#define MOBILE_IP_ADDRESS 90
 
-// online minifier https://www.willpeavy.com/minifier/
 const char webSite[] PROGMEM = {"<!DOCTYPE HTML> <head> <title>Dwukołowy robot inspekcyjny</title> <meta charset=\"UTF-8\"> <style>body{background-color: #000; font-family: Calibri; color: #fff; text-align: center;}.footer{position: fixed; right: 0; bottom: 0; left: 0; padding: 1rem; background-color: #111; text-align: center;}.minor-header{border-bottom: 3px solid black; font-size: 1.5em; font-weight: bold;}.reg-header{margin-top: 3px; font-size: 1.1em; font-weight: bold;}.measurement-left-block{width: 49.75%; float: left; border-right: 2px solid black;}.measurement-right-block{width: 49.75%; float: left; border-left: 2px solid black;}.reg-left-block{width: 33%; float: left; border-right: 2px solid black;}.reg-mid-block{width: 33%; float: left; border-right: 2px solid black; border-left: 2px solid black;}.reg-right-block{width: 33%; float: left; border-left: 2px solid black;}.measurement-container{clear: both; margin-bottom: 15px; background-color: DimGray;}.measurement-container:hover{background-color: gray;}.scan-button{background-color: green; border: none; color: white; padding: 15px 40px; text-align: center; text-decoration: none; display: inline-block; font-size: 25px; cursor: pointer;}p{margin-top: 5px; margin-bottom: 5px;}button{margin-top: 2px; margin-bottom: 3px; font-size: 11px; font-weight: bold; padding: 4px; padding-left: 15px; padding-right: 15px; cursor: pointer;}</style> <script src=\"https://cdn.plot.ly/plotly-latest.min.js\"></script></head><script>var xmlHttp=createXmlHttpObject(); var xmlHttpOn=createXmlHttpObject(); var xmlHttpOff=createXmlHttpObject(); var powerOn=false; var busy=false; function setPowerButton(){if(powerOn && !busy){document.getElementById(\"battery-switch\").innerHTML=\"STOP\"; document.getElementById(\"battery-switch\").style.background=\"Red\"; document.getElementById(\"battery-switch\").style.color=\"White\";}else if(!powerOn && !busy){document.getElementById(\"battery-switch\").innerHTML=\"SKANUJ\"; document.getElementById(\"battery-switch\").style.background=\"Green\"; document.getElementById(\"battery-switch\").style.color=\"White\";}}function powerSwitch(){if(!powerOn && !busy){busy=true; document.getElementById(\"battery-switch\").style.background=\"DarkOliveGreen\"; document.getElementById(\"battery-switch\").style.color=\"Gray\"; xmlHttpOn.open('PUT','/on',true); xmlHttpOn.onreadystatechange=handleSwitchOn; xmlHttpOn.send(null);}else if(powerOn && !busy){busy=true; document.getElementById(\"battery-switch\").style.background=\"Brown\"; document.getElementById(\"battery-switch\").style.color=\"Gray\"; xmlHttpOff.open('PUT','/off',true); xmlHttpOff.onreadystatechange=handleSwitchOff; xmlHttpOff.send(null);}}function getPID(regulatorPart, pidValue){xmlHttpOff.open('PUT','/pid?part=' + regulatorPart + '&value=' + pidValue.value.toString(), true); xmlHttpOff.send(null);}function createXmlHttpObject(){if(window.XMLHttpRequest){xmlHttp=new XMLHttpRequest();}else{xmlHttp=new ActiveXObject('Microsoft.XMLHTTP');}return xmlHttp;}function get_firstchild(n){var x=n.firstChild; while (x.nodeType !=1){x=x.nextSibling;}return x;}function process(){setPowerButton(); plotMeasurements(); if(xmlHttp.readyState==0 || xmlHttp.readyState==4){xmlHttp.open('PUT','xml',true); xmlHttp.onreadystatechange=handleServerResponse; xmlHttp.send(null);}setTimeout('process()',200);}function handleSwitchOn(){if(xmlHttpOn.readyState==4 && xmlHttpOn.status==200){powerOn=true; document.getElementById(\"battery-switch\").innerHTML=\"STOP\"; document.getElementById(\"battery-switch\").style.background=\"Red\"; document.getElementById(\"battery-switch\").style.color=\"White\"; busy=false;}}function handleSwitchOff(){if(xmlHttpOff.readyState==4 && xmlHttpOff.status==200){powerOn=false; document.getElementById(\"battery-switch\").innerHTML=\"SKANUJ\"; document.getElementById(\"battery-switch\").style.background=\"Green\"; document.getElementById(\"battery-switch\").style.color=\"White\"; busy=false;}}function handleServerResponse(){if(xmlHttp.readyState==4 && xmlHttp.status==200){xmlResponse=xmlHttp.responseXML; xmldoc=xmlResponse.getElementsByTagName('response-time'); message=xmldoc[0].firstChild.nodeValue; document.getElementById('runtime').innerHTML=message; xmldoc=xmlResponse.getElementsByTagName('response-fx'); message=xmldoc[0].firstChild.nodeValue; document.getElementById('fx').innerHTML=message; xmldoc=xmlResponse.getElementsByTagName('response-fy'); message=xmldoc[0].firstChild.nodeValue; document.getElementById('fy').innerHTML=message; xmldoc=xmlResponse.getElementsByTagName('response-fz'); message=xmldoc[0].firstChild.nodeValue; document.getElementById('fz').innerHTML=message; xmldoc=xmlResponse.getElementsByTagName('response-ax'); message=xmldoc[0].firstChild.nodeValue; document.getElementById('ax').innerHTML=message; xmldoc=xmlResponse.getElementsByTagName('response-ay'); message=xmldoc[0].firstChild.nodeValue; document.getElementById('ay').innerHTML=message; xmldoc=xmlResponse.getElementsByTagName('response-az'); message=xmldoc[0].firstChild.nodeValue; document.getElementById('az').innerHTML=message; xmldoc=xmlResponse.getElementsByTagName('response-lpos'); message=xmldoc[0].firstChild.nodeValue; document.getElementById('lpos').innerHTML=message; xmldoc=xmlResponse.getElementsByTagName('response-rpos'); message=xmldoc[0].firstChild.nodeValue; document.getElementById('rpos').innerHTML=message; xmldoc=xmlResponse.getElementsByTagName('response-xl'); message=xmldoc[0].firstChild.nodeValue; document.getElementById('xl').innerHTML=message; xmldoc=xmlResponse.getElementsByTagName('response-vl'); message=xmldoc[0].firstChild.nodeValue; document.getElementById('vl').innerHTML=message; xmldoc=xmlResponse.getElementsByTagName('response-nap'); message=xmldoc[0].firstChild.nodeValue; document.getElementById('nap').innerHTML=message; xmldoc=xmlResponse.getElementsByTagName('response-dir'); message=xmldoc[0].firstChild.nodeValue; document.getElementById('dir').innerHTML=message; xmldoc=xmlResponse.getElementsByTagName('response-pid'); message=xmldoc[0].firstChild.nodeValue; document.getElementById('pid').innerHTML=message; xmldoc=xmlResponse.getElementsByTagName('response-turn'); message=xmldoc[0].firstChild.nodeValue.replace(/\s+/g, ''); if(message==='1') powerOn=true; else if(message==='0') powerOn=false; xmldoc=xmlResponse.getElementsByTagName('response-dist-m'); message=xmldoc[0].firstChild.nodeValue; document.getElementById('mdist').innerHTML=message; xmldoc=xmlResponse.getElementsByTagName('response-balance-error'); message=xmldoc[0].firstChild.nodeValue; document.getElementById('errbalance').innerHTML=message; xmldoc=xmlResponse.getElementsByTagName('response-pos-error'); message=xmldoc[0].firstChild.nodeValue; document.getElementById('errpos').innerHTML=message; xmldoc=xmlResponse.getElementsByTagName('response-pos-pid'); message=xmldoc[0].firstChild.nodeValue; document.getElementById('pidpos').innerHTML=message; xmldoc=xmlResponse.getElementsByTagName('response-motor-error'); message=xmldoc[0].firstChild.nodeValue; document.getElementById('errmotor').innerHTML=message; xmldoc=xmlResponse.getElementsByTagName('response-motor-pid'); message=xmldoc[0].firstChild.nodeValue; document.getElementById('pidmotor').innerHTML=message; xmldoc=xmlResponse.getElementsByTagName('response-xr'); message=xmldoc[0].firstChild.nodeValue; document.getElementById('xr').innerHTML=message; xmldoc=xmlResponse.getElementsByTagName('response-vr'); message=xmldoc[0].firstChild.nodeValue; document.getElementById('vr').innerHTML=message; /*xmldoc=xmlResponse.getElementsByTagName('response-battery'); message=xmldoc[0].firstChild.nodeValue; document.getElementById('battery').innerHTML=message;*/ xmldoc=xmlResponse.getElementsByTagName('rssi'); message=xmldoc[0].firstChild.nodeValue; document.getElementById('rssi').innerHTML=message;}}var timeUnit=0; var timeTable=[timeUnit]; function createBalancePlotMeasurements(){var plot=document.getElementById(\"balanceplot\"); var fx=document.getElementById(\"fx\").innerHTML; var ax=document.getElementById(\"ax\").innerHTML; var error=document.getElementById(\"errbalance\").innerHTML; var pid=document.getElementById(\"pid\").innerHTML; var angle={x: timeTable, y: [fx], name: 'fx', type: \"scatter\"}; var angularAcceleration={x: timeTable, y: [ax], name: 'ax', type: \"scatter\"}; var controlInput={x: timeTable, y: [error], name: 'Uchyb', type: \"scatter\"}; var controlOutput={x: timeTable, y: [pid], name: 'Wyjście', type: \"scatter\"}; var layout={title: 'Wykres wejścia i wyjścia - regulator kąta wychylenia', xaxis:{title: 'Czas', showline: true, mirror: 'allticks', ticks: 'inside'}, margin:{l: 40, b: 35, t: 35}}; var data=[angle, angularAcceleration, controlInput, controlOutput]; Plotly.plot(plot, data, layout);}function createLinearPlotMeasurements(){var plot=document.getElementById(\"linearplot\"); var ax=document.getElementById(\"ax\").innerHTML; var error=document.getElementById(\"errpos\").innerHTML; var pid=document.getElementById(\"pidpos\").innerHTML; var angularAcceleration={x: timeTable, y: [ax], name: 'ax', type: \"scatter\"}; var controlInput={x: timeTable, y: [error], name: 'Uchyb', type: \"scatter\"}; var controlOutput={x: timeTable, y: [pid], name: 'Wyjście', type: \"scatter\"}; var layout={title: 'Wykres wejścia i wyjścia - regulator prędkości liniowej', xaxis:{title: 'Czas', showline: true, mirror: 'allticks', ticks: 'inside'}, margin:{l: 40, b: 35, t: 35}}; var data=[angularAcceleration, controlInput, controlOutput]; Plotly.plot(plot, data, layout);}function createMotorPlotMeasurements(){var plot=document.getElementById(\"motorplot\"); var xl=document.getElementById(\"xl\").innerHTML; var xr=document.getElementById(\"xr\").innerHTML; var error=document.getElementById(\"errmotor\").innerHTML; var pid=document.getElementById(\"pidmotor\").innerHTML; var leftPosition={x: timeTable, y: [xl], name: 'left pos', type: \"scatter\"}; var rightPosition={x: timeTable, y: [xr], name: 'right pos', type: \"scatter\"}; var controlInput={x: timeTable, y: [error], name: 'Uchyb', type: \"scatter\"}; var controlOutput={x: timeTable, y: [pid], name: 'Wyjście', type: \"scatter\"}; var layout={title: 'Wykres wejścia i wyjścia - regulator silników', xaxis:{title: 'Czas', showline: true, mirror: 'allticks', ticks: 'inside'}, margin:{l: 40, b: 35, t: 35}}; var data=[leftPosition, rightPosition, controlInput, controlOutput]; Plotly.plot(plot, data, layout);}function start(){createBalancePlotMeasurements(); createLinearPlotMeasurements(); createMotorPlotMeasurements(); process();}function plotBalanceMeasurements(){var plot=document.getElementById(\"balanceplot\"); var fx=document.getElementById(\"fx\").innerHTML; var ax=document.getElementById(\"ax\").innerHTML; var error=document.getElementById(\"errbalance\").innerHTML; var pid=document.getElementById(\"pid\").innerHTML; var dataY=[[fx], [ax], [error], [pid]]; var dataX=[timeTable, timeTable, timeTable, timeTable]; var extendedPlot={x: dataX, y: dataY}; Plotly.extendTraces(plot, extendedPlot, [0, 1, 2, 3]);}function plotLinearMeasurements(){var plot=document.getElementById(\"linearplot\"); var ax=document.getElementById(\"ax\").innerHTML; var error=document.getElementById(\"errpos\").innerHTML; var pid=document.getElementById(\"pidpos\").innerHTML; var dataY=[[ax], [error], [pid]]; var dataX=[timeTable, timeTable, timeTable]; var extendedPlot={x: dataX, y: dataY}; Plotly.extendTraces(plot, extendedPlot, [0, 1, 2]);}function plotMotorMeasurements(){var plot=document.getElementById(\"motorplot\"); var xl=document.getElementById(\"xl\").innerHTML; var xr=document.getElementById(\"xr\").innerHTML; var error=document.getElementById(\"errmotor\").innerHTML; pid=document.getElementById(\"pidmotor\").innerHTML; var dataY=[[xl], [xr], [error], [pid]]; var dataX=[timeTable, timeTable, timeTable, timeTable]; var extendedPlot={x: dataX, y: dataY}; Plotly.extendTraces(plot, extendedPlot, [0, 1, 2, 3]);}function plotMeasurements(){timeUnit +=0.2; timeTable=[timeUnit]; plotBalanceMeasurements(); plotLinearMeasurements(); plotMotorMeasurements();}</script><body onload='start()'> <div style=\"width: 800px; float: left\"> <h1>DWUKOŁOWY ROBOT INSPEKCYJNY</h1> <div class='measurement-container' style=\"height: 109px;\"> <div class='measurement-left-block'> <div class='minor-header'>Pozycja kątowa:</div><p>FX: <A id='fx'></A></p><p>FY: <A id='fy'></A></p><p>FZ: <A id='fz'></A></p></div><div class='measurement-right-block'> <div class='minor-header'>Przyspieszenie kątowe:</div><p>AX: <A id='ax'></A> 1/s2</p><p>AY: <A id='ay'></A> 1/s2</p><p>AZ: <A id='az'></A> 1/s2</p></div></div><div class='measurement-container' style=\"height: 61px;\"> <div style='width: 79%; float: left;'> <div class='minor-header'>Skanowanie pomieszczeń:</div><div class='measurement-left-block' style='width: 49.685%;'> <p>Odległość od przeszkody: <A id='mdist'></A> cm</p></div><div class='measurement-right-block' style='width: 49.685%;'> <button>WYŚWIETL MAPĘ</button> </div></div><div style='width: 21%; background-color: black; float: left; text-align: right;'> <div id=\"battery-switch\" onclick=\"powerSwitch()\" class='scan-button'> SKANUJ </div></div></div><div class='measurement-container' style=\"height: 238px;\"> <div class='minor-header'>Teoria sterowania</div><div class='reg-left-block'> <div class='reg-header'>Balansowanie:</div><p>Wartość P: 0.019</p><p>Wartość I: 0.011</p><p>Wartość D: 0.000</p><p>Nasycenie: 1000</p><p>Wejście: <A id='errbalance'></A></p><p>Wyjście: <A id='pid'></A></p></div><div class='reg-mid-block'> <div class='reg-header'>Położenie liniowe:</div><p>Wartość P: 12.000</p><p>Wartość I: 0.000</p><p>Wartość D: 0.000</p><p>Nasycenie: 5000</p><p>Wejście: <A id='errpos'></A></p><p>Wyjście: <A id='pidpos'></A></p></div><div class='reg-right-block'> <div class='reg-header'>Sterownik silników:</div><p>Wartość P: 0.800</p><p>Wartość I: 0.000</p><p>Wartość D: 0.000</p><p>Nasycenie: 1000</p><p>Wejście: <A id='errmotor'></A></p><p>Wyjście: <A id='pidmotor'></A></p></div><div style='border-top: 3px solid black; clear: both;'> <button style='margin-top: 2px;'>WYŚWIETL WYKRESY</button> </div></div><div class='measurement-container' style=\"height: 109px;\"> <div class='minor-header'>Pozycja liniowa: <span style='font-weight: 100;'>(aktualny kierunek: <A id='dir'></A>)</span> </div><div class='measurement-left-block'> <p>Kąt lewego koła: <A id='lpos'></A> stopni</p><p>Droga lewego koła: <A id='xl'></A> cm</p><p>Prędkość liniowa wg lewego koła: <A id='vl'></A> km/h</p></div><div class='measurement-right-block'> <p>Kąt prawego koła: <A id='rpos'></A> stopni</p><p>Droga prawego koła: <A id='xr'></A> cm</p><p>Prędkość liniowa wg prawego koła: <A id='vr'></A> km/h</p></div></div><div class='measurement-container' style=\"height: 85px;\"> <div class='minor-header'>Pozostałe informacje:</div><div class='measurement-left-block'> <p>Napięcie ESP8266: <A id='nap'></A> V</p><p>Czas działania: <A id='runtime'></A></p></div><div class='measurement-right-block'> <p>Siła sygnału WiFi: <A id='rssi'></A> dBm</p><div style='height: 29px;'></div></div></div></div><div id=\"plotcontainer\" style=\"width:600px; height:664px; float: left; margin-left: 50px; margin-top: 80px;\"> <div id=\"balanceplot\" style=\"width: 100%; height: 214px; margin-bottom: 10px;\"></div><div id=\"linearplot\" style=\"width: 100%; height: 214px; margin-bottom: 10px;\"></div><div id=\"motorplot\" style=\"width: 100%; height: 214px; margin-bottom: 10px;\"></div><!--<div id=\"pid-container\" style=\"background-color:DimGray; text-align:center; width:600px; height:170px; float:left;\"> <div class='minor-header'>Wartości regulatora PID: </div><br><div style=\"width:300px; height:100px; margin: 0 auto; text-align:center;\"> <div style=\"float:left; padding:3px;\"> P: <input type=\"text\" onkeyup=\"getPID('p',this)\" id=\"p\" size=\"5\" value=\"7\"></div><div style=\"float:left; padding:3px;\"> I: <input type=\"text\" onkeyup=\"getPID('i',this)\" id=\"i\" size=\"5\" value=\"0.05\"></div><div style=\"float:left; padding:3px;\"> D: <input type=\"text\" onkeyup=\"getPID('d',this)\" id=\"d\" size=\"5\" value=\"0.5\"></div></div></div>--> </div><div class='footer'> Mateusz Staszków - Praca inżynierska \"Dwukołowy robot inspekcyjny\", Politechnika Warszawska 2017 </div></BODY></HTML>"};
 
 typedef struct MeasuredData {
@@ -133,6 +134,23 @@ void read_uart() {
   parseData(measuredData, buffer_uart);
 }
 
+String millis2time(){
+  String Time="";
+  unsigned long ss;
+  byte mm,hh;
+  ss=millis()/1000;
+  hh=ss/3600;
+  mm=(ss-hh*3600)/60;
+  ss=(ss-hh*3600)-mm*60;
+  if(hh<10)Time+="0";
+  Time+=(String)hh+":";
+  if(mm<10)Time+="0";
+  Time+=(String)mm+":";
+  if(ss<10)Time+="0";
+  Time+=(String)ss;
+  return Time;
+}
+
 void buildXML(){  
   String move_direction = "";
   if(measuredData.dir == 1) move_direction = "przód";
@@ -223,23 +241,6 @@ void buildXML(){
   XML+="  </Data>"; 
 }
 
-String millis2time(){
-  String Time="";
-  unsigned long ss;
-  byte mm,hh;
-  ss=millis()/1000;
-  hh=ss/3600;
-  mm=(ss-hh*3600)/60;
-  ss=(ss-hh*3600)-mm*60;
-  if(hh<10)Time+="0";
-  Time+=(String)hh+":";
-  if(mm<10)Time+="0";
-  Time+=(String)mm+":";
-  if(ss<10)Time+="0";
-  Time+=(String)ss;
-  return Time;
-}
-
 void handleWebsite(){
   server.send_P(200,"text/html",webSite);
 }
@@ -280,40 +281,47 @@ void serialPrintWithArg(char* preCharTab, const char* postCharTab) {
   Serial.println(result);
 }
 
-void setup() {  
-  Serial.begin(115200);  
+void configureMobileNetwork() {
+  IPAddress ip(192, 168, 43, MOBILE_IP_ADDRESS);
+  IPAddress gateway(192, 168, 43, 1);
+  IPAddress subnet(255, 255, 255, 0);
+  WiFi.config(ip, gateway, subnet);
+}
 
-  while(WiFi.status() != WL_CONNECTED) {
-    int tryCount = 0;
-    Serial.println("\n\nBOOTING ESP8266 ...");
-  
+void connectToNetwork() {
+  int tryCount = 0;
+  while((WiFi.status() != WL_CONNECTED) && (tryCount != MAX_CONNECTION_TRY_COUNT)) {
+    delay(500);
+    tryCount++;
+  }
+}
+
+void connectToHomeHotSpot() {
+  if(WiFi.status() != WL_CONNECTED) {
+    WiFi.disconnect();
     serialPrintWithArg("Trying to connect to SSID: ", ssid);
     WiFi.begin(ssid, password);
-    while((WiFi.status() != WL_CONNECTED) && (tryCount != 20)) {
-      delay(500);
-      tryCount++;
-    }
-    
-    if(tryCount == 20) {
-      WiFi.disconnect();
-      serialPrintWithArg("Could not connect to SSID: ", ssid);
-      IPAddress ip(192, 168, 43, 90);
-      IPAddress gateway(192, 168, 43, 1);
-      IPAddress subnet(255, 255, 255, 0);
-      WiFi.config(ip, gateway, subnet);
-      serialPrintWithArg("Trying to connect to SSID: ", ssidTel);
-      WiFi.begin(ssidTel, passwordTel);
-      tryCount = 0;
-      while((WiFi.status() != WL_CONNECTED) && (tryCount != 20)) {
-        delay(500);
-        tryCount++;
-      }
-    }
-    if(tryCount == 20) {
-      serialPrintWithArg("Could not connect to SSID: ", ssidTel);
-    }
+    connectToNetwork();
   }
+  if(WiFi.status() != WL_CONNECTED) {
+    serialPrintWithArg("Could not connect to SSID: ", ssid);
+  }
+}
 
+void connectToMobileHotSpot() {
+  if(WiFi.status() != WL_CONNECTED) {
+    WiFi.disconnect();
+    configureMobileNetwork();
+    serialPrintWithArg("Trying to connect to SSID: ", ssidTel);
+    WiFi.begin(ssidTel, passwordTel);
+    connectToNetwork();
+  }
+  if(WiFi.status() != WL_CONNECTED) {
+    serialPrintWithArg("Could not connect to SSID: ", ssidTel);
+  }
+}
+
+void configureBackend() {
   WiFi.mode(WIFI_STA);
   Serial.print("Connected to SSID: ");
   Serial.println(WiFi.SSID());
@@ -325,6 +333,18 @@ void setup() {
   server.on("/on",handleOn);
   server.on("/off",handleOff);
   server.on("/pid",handlePID);
+}
+
+void setup() {  
+  Serial.println("\n\nBOOTING ESP8266 ...");
+  Serial.begin(115200);  
+
+  while(WiFi.status() != WL_CONNECTED) {
+    connectToHomeHotSpot();
+    connectToMobileHotSpot();
+  }
+
+  configureBackend();
   server.begin();  
 }
 
