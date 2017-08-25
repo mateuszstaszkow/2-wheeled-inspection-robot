@@ -154,8 +154,8 @@
   <script src='https://cdn.plot.ly/plotly-latest.min.js'></script>
 </head>
 <script>
-  var deg2rad = Math.PI/180;
-  var rad2deg = 180/Math.PI;
+  var DEGREES_TO_RADIANS = Math.PI/180;
+  var RADIANS_TO_DEGREES = 180/Math.PI;
 
   var xmlHttp=createXmlHttpObject();
   var xmlHttpOn=createXmlHttpObject();
@@ -165,9 +165,8 @@
   var timeUnit = 0;
   var timeTable = [timeUnit];
   var lastDist = 0;
-  var lastFz = 0;
   var dfz = 0;
-  var robotAngle = 0;
+  var lastDfz = 0;
   
   function showMap() {
 	document.getElementById('plotcontainer').style.display = 'none';
@@ -366,6 +365,10 @@
      message = xmldoc[0].firstChild.nodeValue;
      document.getElementById('vr').innerHTML=message;
 	 
+	 xmldoc = xmlResponse.getElementsByTagName('response-dfz');
+     message = xmldoc[0].firstChild.nodeValue;
+     dfz = message;
+	 
 	 /*xmldoc = xmlResponse.getElementsByTagName('response-battery');
 	 message = xmldoc[0].firstChild.nodeValue;
 	 document.getElementById('battery').innerHTML=message;*/
@@ -399,7 +402,7 @@
     var controlInput = {
      x: timeTable,
      y: [error],
-     name: 'Uchyb',
+     name: 'Uchyb/100',
      type: 'scatter'
     };
     var controlOutput = {
@@ -434,7 +437,7 @@
     var controlInput = {
      x: timeTable,
      y: [error],
-     name: 'Uchyb',
+     name: 'Uchyb/100',
      type: 'scatter'
     };
     var controlOutput = {
@@ -476,7 +479,7 @@
     var controlInput = {
      x: timeTable,
      y: [error],
-     name: 'Uchyb',
+     name: 'Uchyb/100',
      type: 'scatter'
     };
     var controlOutput = {
@@ -499,8 +502,6 @@
   function createDistancePlotMeasurements(){
     var plot = document.getElementById('distplot');
     var mdist = document.getElementById('mdist').innerHTML;
-	var fz = document.getElementById('fz').innerHTML;
-	lastFz = fz;
 	
     var middleDistance = {
      x: timeTable,
@@ -510,7 +511,7 @@
     };
 	var angle = {
      x: timeTable,
-     y: [fz],
+     y: [dfz],
      name: 'dfz',
      type: 'scatter'
     };
@@ -622,9 +623,6 @@
   function plotDistanceMeasurements() {
 	var plot = document.getElementById('distplot');
     var mdist = document.getElementById('mdist').innerHTML;
-	var currFz = Number(document.getElementById('fz').innerHTML);
-	dfz = currFz - lastFz;
-	last_fz = currFz;
 	
     var dataY = [[mdist], [dfz]];
     var dataX = [timeTable, timeTable];
@@ -639,20 +637,18 @@
   function rotateRobot() {
 	var c = document.getElementById('robot');
 	var ctx = c.getContext('2d');
-	var angle = dfz*deg2rad/100;
-	robotAngle += angle;
 	
 	ctx.clearRect(0, 0, 120, 120);
 	
 	ctx.translate(60, 60);
-	ctx.rotate(angle);
+	ctx.rotate(dfz * DEGREES_TO_RADIANS);
 	ctx.translate(-60, -60);
 	
 	createRobot();
   }
   
   function mapDistance() {
-	var angle = robotAngle % (360 * deg2rad);
+	var angle = (Number(document.getElementById('fz').innerHTML) % 360) * DEGREES_TO_RADIANS;
 	var mdist = 0.8 * Number(document.getElementById('mdist').innerHTML) + 50;
 	if(mdist > 200) mdist = 200;
 	if(mdist < 0) mdist = 0;
@@ -687,10 +683,12 @@
     plotLinearMeasurements();
     plotMotorMeasurements();
 	
+	if(dfz != lastDfz) rotateRobot();
+	lastDfz = dfz;
+	
 	if(!powerOn) return;
 	plotDistanceMeasurements();
 	if(!hasRotated()) return;
-	rotateRobot();
 	updateMap();
   }
 </script>
@@ -814,7 +812,7 @@
 	<div id='distplot' class='plot-panel'></div>
   </div>
   <div class='footer'>
-    Mateusz Staszków - Praca inżynierska 'Dwukołowy robot inspekcyjny', Politechnika Warszawska 2017
+    Mateusz Staszków - Praca inżynierska "Dwukołowy robot inspekcyjny", Politechnika Warszawska 2017
   </div>
 </BODY>
 </HTML>
