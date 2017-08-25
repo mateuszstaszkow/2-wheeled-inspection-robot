@@ -56,30 +56,3 @@ void encoder_init() {
 	left_encoder_init();
 	right_encoder_init();
 }
-
-
-
-void EXTI9_5_IRQHandler() {
-	if((r_encoder_counter++) % ENCODER_INTERRUPT_FREQUENCY_DIVISOR) {
-		if(EXTI_GetITStatus(ENCODER_RIGHT_Interrupt_Line)) EXTI_ClearITPendingBit(ENCODER_RIGHT_Interrupt_Line);
-		return;
-	}
-	if (EXTI_GetITStatus(ENCODER_RIGHT_Interrupt_Line) && (GPIO_ReadInputDataBit(ENCODER_RIGHT_Port, ENCODER_RIGHT_A_Pin) != 1)) return;
-	
-	if(GPIO_ReadInputDataBit(ENCODER_RIGHT_Port, ENCODER_RIGHT_B_Pin) == 0) r_cnt_flag_forward = true;
-	else r_cnt_flag_backward = true;
-	EXTI_ClearITPendingBit(ENCODER_RIGHT_Interrupt_Line);
-}
-
-void EXTI15_10_IRQHandler() {
-	if((l_encoder_counter++) % ENCODER_INTERRUPT_FREQUENCY_DIVISOR) {
-		if(EXTI_GetITStatus(ENCODER_LEFT_Interrupt_Line)) EXTI_ClearITPendingBit(ENCODER_LEFT_Interrupt_Line);
-		return;
-	}
-	if (EXTI_GetITStatus(ENCODER_LEFT_Interrupt_Line) && (GPIO_ReadInputDataBit(ENCODER_LEFT_Port, ENCODER_LEFT_A_Pin) != 1)) return;
-	
-	if(GPIO_ReadInputDataBit(ENCODER_LEFT_Port, ENCODER_LEFT_B_Pin) == 0) l_cnt_flag_backward = true;
-	else l_cnt_flag_forward = true;
-
-	EXTI_ClearITPendingBit(ENCODER_LEFT_Interrupt_Line);
-}

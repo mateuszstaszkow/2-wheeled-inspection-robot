@@ -24,8 +24,8 @@
 #define ESP8266_USART_RX_Pin				GPIO_Pin_11
 #define ESP8266_USART_Speed					115200
 
-#define ENCODER_LEFT_RCC_Port				RCC_APB2Periph_GPIOC
 #define ENCODER_LEFT_RCC_Special			RCC_APB2Periph_AFIO
+#define ENCODER_LEFT_RCC_Port				RCC_APB2Periph_GPIOC
 #define ENCODER_LEFT_Port					GPIOC
 #define ENCODER_LEFT_A_Pin					GPIO_Pin_11
 #define ENCODER_LEFT_B_Pin					GPIO_Pin_10
@@ -64,6 +64,40 @@
 #define MOTOR_DIR_RIGHT_B_Port				GPIOA
 #define MOTOR_DIR_RIGHT_B_Pin				GPIO_Pin_0
 
+#define HCSR_TRIG_TIME_us						2
+#define HCSR04_INTERRUPT_RCC					RCC_APB2Periph_AFIO
+#define HCSR04_RIGHT_ECHO_RCC					RCC_APB2Periph_GPIOA
+#define HCSR04_RIGHT_ECHO_Port					GPIOA
+#define HCSR04_RIGHT_ECHO_Pin					GPIO_Pin_2
+#define HCSR04_RIGHT_ECHO_Interrupt_Line		EXTI_Line2
+#define HCSR04_RIGHT_ECHO_Interrupt_Port		GPIO_PortSourceGPIOA
+#define HCSR04_RIGHT_ECHO_Interrupt_Pin			GPIO_PinSource2
+#define HCSR04_RIGHT_ECHO_Interrupt_Channel		EXTI4_IRQn
+#define HCSR04_RIGHT_TRIG_RCC					RCC_APB2Periph_GPIOA
+#define HCSR04_RIGHT_TRIG_Port					GPIOA
+#define HCSR04_RIGHT_TRIG_Pin					GPIO_Pin_3
+#define HCSR04_MIDDLE_ECHO_RCC					RCC_APB2Periph_GPIOA
+#define HCSR04_MIDDLE_ECHO_Port					GPIOA
+#define HCSR04_MIDDLE_ECHO_Pin					GPIO_Pin_4
+#define HCSR04_MIDDLE_ECHO_Interrupt_Line		EXTI_Line4
+#define HCSR04_MIDDLE_ECHO_Interrupt_Port		GPIO_PortSourceGPIOA
+#define HCSR04_MIDDLE_ECHO_Interrupt_Pin		GPIO_PinSource4
+#define HCSR04_MIDDLE_ECHO_Interrupt_Channel	EXTI4_IRQn
+#define HCSR04_MIDDLE_TRIG_RCC					RCC_APB2Periph_GPIOA
+#define HCSR04_MIDDLE_TRIG_Port					GPIOA
+#define HCSR04_MIDDLE_TRIG_Pin					GPIO_Pin_5
+#define HCSR04_LEFT_ECHO_RCC					RCC_APB2Periph_GPIOA
+#define HCSR04_LEFT_ECHO_Port					GPIOA
+#define HCSR04_LEFT_ECHO_Pin					GPIO_Pin_6
+#define HCSR04_LEFT_ECHO_Interrupt_Line			EXTI_Line6
+#define HCSR04_LEFT_ECHO_Interrupt_Port			GPIO_PortSourceGPIOA
+#define HCSR04_LEFT_ECHO_Interrupt_Pin			GPIO_PinSource6
+#define HCSR04_LEFT_ECHO_Interrupt_Channel		EXTI9_5_IRQn
+#define HCSR04_LEFT_TRIG_RCC					RCC_APB2Periph_GPIOA
+#define HCSR04_LEFT_TRIG_Port					GPIOA
+#define HCSR04_LEFT_TRIG_Pin					GPIO_Pin_7
+
+
 #define BATTERY_STATE_RCC					RCC_APB2Periph_GPIOC
 #define BATTERY_STATE_Port					GPIOC
 #define BATTERY_STATE_Pin					GPIO_Pin_3
@@ -80,6 +114,7 @@
 
 #define PI 									3.141593
 #define MPU_CONSTANT 						180
+#define HCSR_CONSTANT						0.017
 
 
 // Interrupt constants
@@ -90,7 +125,7 @@
 #define MPU_INTERRUPT_PERIOD_MS 			1
 #define BATTERY_STATUS_PERIOD_MS			200
 #define ROBOT_SINGLE_TURN_PERIOD_MS			500
-#define WIFI_ORDER_READ_PERIOD_MS			100
+#define WIFI_ORDER_READ_PERIOD_MS			50
 #define ENCODER_INTERRUPT_FREQUENCY_DIVISOR 1
 
 #endif /* __PROPERTIES_H */

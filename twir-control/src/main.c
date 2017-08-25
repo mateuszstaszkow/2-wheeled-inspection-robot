@@ -43,12 +43,14 @@ void init_flags() {
 	r_cnt_flag_backward = false;
 	mpu_flag = false;
 	battery_flag = false;
+	hcsr_flag = false;
 
 	start_flag = false;
 	execute_flag = false;
 	turn_flag = false;
 	busy_turning_flag = false;
 	turn_mode_flag = false;
+	sector_captured_flag = false;
 }
 
 void set_tables() {
@@ -89,14 +91,30 @@ void global_timer_init() {
 	SysTick_Config(SystemCoreClock / SYS_TICK_INTERRUPT_FREQUENCY_HZ);
 }
 
+void timer_us_init() {
+	RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM3, ENABLE);
+
+	TIM_TimeBaseInitTypeDef tim;
+
+	TIM_TimeBaseStructInit(&tim);
+	tim.TIM_CounterMode = TIM_CounterMode_Up;
+	tim.TIM_Prescaler = 64 - 1;
+	tim.TIM_Period = 50000 - 1;
+	TIM_TimeBaseInit(TIM3, &tim);
+
+	TIM_ITConfig(TIM3, TIM_IT_Update, ENABLE);
+}
+
 void hardware_setup() {
 	encoder_init();
 	motor_driver_init();
 	esp_init();
+	hcsr_init();
 	MPU6050_I2C_Init();
 	MPU6050_Initialize();
 	global_variables_init();
 	global_timer_init();
+	timer_us_init();
 }
 
 void get_order() {
@@ -106,11 +124,14 @@ void get_order() {
 
 	if(order == 'n') {
 		turn_mode_flag = true;
+		hcsr_flag = true;
 	}
 	else if(order == 'f') {
 		turn_mode_flag = false;
 		busy_turning_flag = false;
 		turn_flag = false;
+		hcsr_flag = false;
+		sector_captured_flag = false;
 	}
 
 	execute_flag = false;
@@ -130,6 +151,7 @@ void rotate_robot() {
 	if(busy_turning_flag && ((global_time_ms - current_time) > SCAN_ROTATION_TIME)) {
 		busy_turning_flag = false;
 		turn_flag = false;
+		hcsr_flag = true;
 		return;
 	} else if(busy_turning_flag) {
 		return;
@@ -142,12 +164,17 @@ void rotate_robot() {
 void correct_robot_position() {
 	if(!start_flag) return;
 	
-	if((!turn_flag || is_balanced()) && !busy_turning_flag) {
+	if(sector_captured_flag && ((turn_flag && is_balanced()) || busy_turning_flag)) {
+		rotate_robot();
+	} else {
 		filtered_balancing_data = simple_complementary_filter();
 		calculate_pid_output(calculate_angle_from_speed(robot_linear_velocity_ref), filtered_balancing_data);
 		motor_driver(robot_turn_speed_ref);
-	} else {
-		rotate_robot();
+		if(hcsr_flag && is_balanced()) {
+			hcsr_get_distance();
+			hcsr_flag = false;
+			sector_captured_flag = true;
+		}
 	}
 
 	start_flag = false;
@@ -164,25 +191,30 @@ void stabilize() {
 }
 
 void export_data_wifi() {
-	printf("%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d;\r\n",
-			(int)filtered_angle,
+	measuredData.fz += AZ_INTEGRAL_ERROR_COMPENSATION;
+
+	printf("%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,;\r\n",
+			(int)filtered_angle / MPU_CONSTANT,
 			(int)measuredData.fy,
-		    (int)measuredData.fz,
-			(int)filtered_acc,
+			(int)measuredData.fz / AZ_INTEGRAL_SCALE,
+			(int)filtered_acc / MPU_CONSTANT,
 			(int)measuredData.ay,
 			(int)measuredData.az,
-			(int)measuredData.pos_l%360,
-			(int)measuredData.pos_r%360,
+			(int)measuredData.pos_l % 360,
+			(int)measuredData.pos_r % 360,
 			(int)measuredData.xl,
 			(int)measuredData.vl,
 			(int)measuredData.dir,
-			(int)measuredData.pid,
+			(int)measuredData.pid / 10,
+			(int)(turn_mode_flag ? 1 : 0),
+			(int)measuredData.dist_m,
 			(int)filtered_balancing_data,
 			(int)measuredData.pos_dif,
 			(int)measuredData.pid_position,
+			(int)measuredData.motor_dif,
+			(int)measuredData.pid_motor,
 			(int)measuredData.xr,
-			(int)measuredData.vr,
-			(int)measuredData.battery_state
+			(int)measuredData.vr
 	);
 }
 

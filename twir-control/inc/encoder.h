@@ -23,9 +23,4 @@ void right_encoder_init();
 // may be changed by setting different ENCODER_INTERRUPT_FREQUENCY_DIVISOR
 void encoder_init();
 
-// Right encoder handler, 101 impulses - 360 degrees, see encoder_init() declaration
-void EXTI9_5_IRQHandler();
-// Left encoder handler, 101 impulses - 360 degrees, see encoder_init() declaration
-void EXTI15_10_IRQHandler();
-
 #endif /* PROPERTIES_H_ */
