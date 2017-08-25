@@ -34,12 +34,15 @@ void update_encoder_values() {
 void update_linear_postion() {
 	if(!velocity_flag) return;
 	
-	static int last_x = 0;
+	static int last_xl = 0;
+	static int last_xr = 0;
 
 	measuredData.xr = measuredData.pos_r * POSITION_CONSTANT;
 	measuredData.xl = measuredData.pos_l * POSITION_CONSTANT;
-	measuredData.vl = (measuredData.xl - last_x) * VELOCITY_CONSTANT;
-	last_x = measuredData.xl;
+	measuredData.vl = (measuredData.xl - last_xl) * VELOCITY_CONSTANT;
+	measuredData.vr = (measuredData.xr - last_xr) * VELOCITY_CONSTANT;
+	last_xl = measuredData.xl;
+	last_xr = measuredData.xr;
 	velocity_flag = false;
 }
 

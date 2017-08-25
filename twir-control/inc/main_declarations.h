@@ -16,6 +16,10 @@
 static const int SCAN_ROTATION_SPEED = 300;
 static const uint32_t SCAN_ROTATION_TIME = 40;
 
+// Z angle integral error compensation
+static const uint16_t AZ_INTEGRAL_ERROR_COMPENSATION = 180;
+static const uint16_t AZ_INTEGRAL_SCALE = 300;
+
 // Global variables
 int16_t robot_turn_speed_ref;
 int16_t robot_linear_velocity_ref;

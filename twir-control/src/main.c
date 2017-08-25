@@ -99,7 +99,7 @@ void timer_us_init() {
 	TIM_TimeBaseStructInit(&tim);
 	tim.TIM_CounterMode = TIM_CounterMode_Up;
 	tim.TIM_Prescaler = 64 - 1;
-	tim.TIM_Period = 10000 - 1;
+	tim.TIM_Period = 50000 - 1;
 	TIM_TimeBaseInit(TIM3, &tim);
 
 	TIM_ITConfig(TIM3, TIM_IT_Update, ENABLE);
@@ -191,10 +191,12 @@ void stabilize() {
 }
 
 void export_data_wifi() {
-	printf("%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,;\r\n",
+	measuredData.fz += AZ_INTEGRAL_ERROR_COMPENSATION;
+
+	printf("%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,;\r\n",
 			(int)filtered_angle / MPU_CONSTANT,
 			(int)measuredData.fy,
-		    (int)measuredData.fz,
+			(int)measuredData.fz / AZ_INTEGRAL_SCALE,
 			(int)filtered_acc / MPU_CONSTANT,
 			(int)measuredData.ay,
 			(int)measuredData.az,
@@ -205,15 +207,14 @@ void export_data_wifi() {
 			(int)measuredData.dir,
 			(int)measuredData.pid / 10,
 			(int)(turn_mode_flag ? 1 : 0),
-			(int)measuredData.dist_m * HCSR_CONSTANT,
+			(int)measuredData.dist_m,
 			(int)filtered_balancing_data,
 			(int)measuredData.pos_dif,
 			(int)measuredData.pid_position,
-			(int)measuredData.motor_dif;
-			(int)measuredData.pid_motor;
+			(int)measuredData.motor_dif,
+			(int)measuredData.pid_motor,
 			(int)measuredData.xr,
-			(int)measuredData.vr,
-			(int)measuredData.battery_state
+			(int)measuredData.vr
 	);
 }
 
