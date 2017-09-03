@@ -1341,7 +1341,7 @@ init_pid_structure(&balance_pid, BALANCE_KP, BALANCE_KI, BALANCE_KD, BALANCE_SAT
 \newpage
 \noindent \textbf{Przetwornik impulsów na prędkość}\\
 \\
-Piny A enkoderów reagują na stan rosnący. Ponieważ sygnały na pinach A i B są przesunięte w fazie względem siebie o 90 stopni, to jeżeli w tym czasie stan na pinie B jest niski to kierunek ruchu koła jest interpretowany jako przód, w przeciwnym razie tył (w kierunku osi X). Przy każdym wywołaniu przerwania zwiększana lub zmniejszana jest zmienna typu volatile int (niezoptymalizowana przez kompilator, przechowująca zmiany dokonane w przerwaniach) oznaczająca pozycję kątową wału silnika, która następnie jest przemnażana przez stałą ANGLE CONSTANT, aby zamienić jednostki na cm/s. Fragment kodu:\\
+Piny A enkoderów reagują na zbocze narastające. Ponieważ sygnały na pinach A i B są przesunięte w fazie względem siebie o 90 stopni, to jeżeli w tym czasie stan na pinie B jest niski to kierunek ruchu koła jest interpretowany jako przód, w przeciwnym razie tył (w kierunku osi X). Przy każdym wywołaniu przerwania zwiększana lub zmniejszana jest zmienna typu volatile int (niezoptymalizowana przez kompilator, przechowująca zmiany dokonane w przerwaniach) oznaczająca pozycję kątową wału silnika, która następnie jest przemnażana przez stałą ANGLE CONSTANT, aby zamienić jednostki na cm/s. Fragment kodu:\\
 \\
 \noindent interrupt\_handler.c
 \begin{lstlisting}[style=customc]
@@ -2089,8 +2089,8 @@ Znajdują się tutaj funkcje obsługujące przerwania od licznika i pinów GPIO.
 \noindent Lista obsłużonych przerwań:
 \begin{itemize}
 \item licznik TIM2 - wywołujący przerwanie \SI{10}{\micro s} po uruchomieniu, jest wykorzystywany do dokładnego nadania sygnału na pinie TRIG czujnika HC-SR04, po ustawieniu stanu wysokiego na tym pinie, jest uruchamiany licznik, po \SI{10}{\micro s} następuje procedura obsługi przerwania, która ustawia z powrotem stan niski na pinie TRIG i wyłącza licznik,
-\item piny ECHO czujników HC-SR04 - reagujące na stan rosnący - uruchamiany jest licznik TIM3 (liczący z dokładnościa do \SI{1}{\micro s}) i stan opadający - TIM3 wyłączany i zbierany jest pomiar czasu, który po odpowiednim przekształceniu oznacza odległość od przeszkody,
-\item piny A i B enkoderów - piny A reagują na stan rosnący. Ponieważ sygnały na pinach A i B są przesunięte w fazie względem siebie o 90 stopni, to jeżeli w tym czasie stan na pinie B jest niski to kierunek ruchu koła jest interpretowany jako przód, w przeciwnym razie jako tył (w kierunku osi X). Przy każdym wywołaniu przerwania zwiększana lub zmniejszana jest zmienna typu volatile int (niezoptymalizowana przez kompilator, przechowująca zmiany dokonane w przerwaniach) oznaczająca pozycję kątową wału silnika, która następnie jest przemnażana przez stałą ANGLE CONSTANT, aby zamienić jednostki na cm/s.
+\item piny ECHO czujników HC-SR04 - reagujące na zbocze narastające - uruchamiany jest licznik TIM3 (liczący z dokładnościa do \SI{1}{\micro s}) i zbocze opadające - TIM3 wyłączany i zbierany jest pomiar czasu, który po odpowiednim przekształceniu oznacza odległość od przeszkody,
+\item piny A i B enkoderów - piny A reagują na zbocze narastające. Ponieważ sygnały na pinach A i B są przesunięte w fazie względem siebie o 90 stopni, to jeżeli w tym czasie stan na pinie B jest niski to kierunek ruchu koła jest interpretowany jako przód, w przeciwnym razie jako tył (w kierunku osi X). Przy każdym wywołaniu przerwania zwiększana lub zmniejszana jest zmienna typu volatile int (niezoptymalizowana przez kompilator, przechowująca zmiany dokonane w przerwaniach) oznaczająca pozycję kątową wału silnika, która następnie jest przemnażana przez stałą ANGLE CONSTANT, aby zamienić jednostki na cm/s.
 \end{itemize}
 Plik nagłówkowy:\\
 \begin{lstlisting}[style=customc]
