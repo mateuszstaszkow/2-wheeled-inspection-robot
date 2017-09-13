@@ -258,12 +258,12 @@ void handleXML(){
 
 void handleOn() {
   Serial.println("n;");
-  server.send(200,"text/xml","<battery>on</battery>");
+  server.send(200,"text/xml","<scan>on</scan>");
 }
 
 void handleOff() {
   Serial.println("f;");
-  server.send(200,"text/xml","<battery>off</battery>");
+  server.send(200,"text/xml","<scan>off</scan>");
 }
 
 void handlePID() {
